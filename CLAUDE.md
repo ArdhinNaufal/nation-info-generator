@@ -28,13 +28,13 @@ SPECIFY → PLAN → EXECUTE → VERIFY → RECORD
 
 ## Environment mechanics
 
-<!-- Fill these in once the stack is chosen. Commands the agent CANNOT guess go here. -->
-- Install:    TODO(stack)
-- Build:      TODO(stack)
-- Test (all): TODO(stack)
-- Test (one): TODO(stack)   <!-- the single-file test command is high-value; the agent can't guess it -->
-- Lint/format: TODO(stack)
-- Run locally: TODO(stack)
+- Install:    `npm install`
+- Build:      `npm run build`  (tsc -b + vite build → `dist/`)
+- Test (all): `npm test`  (vitest, offline against `test/fixtures/`)
+- Test (one): `npx vitest run test/render.test.ts`
+- Lint/format: `npm run lint`  (`tsc --noEmit` — type-check is the gate)
+- Run locally: `npm run dev`  (Vite dev server)
+- Verify gate: `bash .claude/skills/verify/scripts/check.sh`  (lint + test)
 
 ## Universally-true rules
 

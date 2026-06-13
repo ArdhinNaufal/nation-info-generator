@@ -1,0 +1,116 @@
+[
+  {
+    "name": {
+      "common": "Japan",
+      "official": "Japan",
+      "nativeName": { "jpn": { "official": "日本国", "common": "日本" } }
+    },
+    "cca2": "JP",
+    "cca3": "JPN",
+    "capital": ["Tokyo"],
+    "region": "Asia",
+    "subregion": "Eastern Asia",
+    "languages": { "jpn": "Japanese" },
+    "currencies": { "JPY": { "name": "Japanese yen", "symbol": "¥" } },
+    "latlng": [36.0, 138.0],
+    "area": 377930.0,
+    "borders": [],
+    "population": 125836021,
+    "flags": { "png": "https://flagcdn.com/w320/jp.png", "alt": "Flag of Japan." },
+    "maps": { "googleMaps": "https://goo.gl/maps/NGTLSCSrA8bMrvnX9" }
+  },
+  {
+    "name": {
+      "common": "France",
+      "official": "French Republic",
+      "nativeName": { "fra": { "official": "République française", "common": "France" } }
+    },
+    "cca2": "FR",
+    "cca3": "FRA",
+    "capital": ["Paris"],
+    "region": "Europe",
+    "subregion": "Western Europe",
+    "languages": { "fra": "French" },
+    "currencies": { "EUR": { "name": "Euro", "symbol": "€" } },
+    "latlng": [46.0, 2.0],
+    "area": 551695.0,
+    "borders": ["AND", "BEL", "DEU", "ITA", "LUX", "MCO", "ESP", "CHE"],
+    "population": 67391582,
+    "flags": { "png": "https://flagcdn.com/w320/fr.png", "alt": "Flag of France." },
+    "maps": { "googleMaps": "https://goo.gl/maps/g7QxxSFsWyTPKuzd7" }
+  },
+  {
+    "name": {
+      "common": "United States",
+      "official": "United States of America",
+      "nativeName": { "eng": { "official": "United States of America", "common": "United States" } }
+    },
+    "cca2": "US",
+    "cca3": "USA",
+    "capital": ["Washington, D.C."],
+    "region": "Americas",
+    "subregion": "North America",
+    "languages": { "eng": "English" },
+    "currencies": { "USD": { "name": "United States dollar", "symbol": "$" } },
+    "latlng": [38.0, -97.0],
+    "area": 9372610.0,
+    "borders": ["CAN", "MEX"],
+    "population": 329484123,
+    "flags": { "png": "https://flagcdn.com/w320/us.png", "alt": "Flag of the United States." },
+    "maps": { "googleMaps": "https://goo.gl/maps/e8M246zY4BSjkjAv6" }
+  },
+  {
+    "name": {
+      "common": "South Korea",
+      "official": "Republic of Korea",
+      "nativeName": { "kor": { "official": "대한민국", "common": "한국" } }
+    },
+    "cca2": "KR",
+    "cca3": "KOR",
+    "capital": ["Seoul"],
+    "region": "Asia",
+    "subregion": "Eastern Asia",
+    "languages": { "kor": "Korean" },
+    "currencies": { "KRW": { "name": "South Korean won", "symbol": "₩" } },
+    "latlng": [37.0, 127.5],
+    "area": 100210.0,
+    "borders": ["PRK"],
+    "population": 51780579,
+    "flags": { "png": "https://flagcdn.com/w320/kr.png", "alt": "Flag of South Korea." },
+    "maps": { "googleMaps": "https://goo.gl/maps/7ZxApJ3WuYXxytL36" }
+  },
+  {
+    "name": {
+      "common": "North Korea",
+      "official": "Democratic People's Republic of Korea",
+      "nativeName": { "kor": { "official": "조선민주주의인민공화국", "common": "조선" } }
+    },
+    "cca2": "KP",
+    "cca3": "PRK",
+    "capital": ["Pyongyang"],
+    "region": "Asia",
+    "subregion": "Eastern Asia",
+    "languages": { "kor": "Korean" },
+    "currencies": { "KPW": { "name": "North Korean won", "symbol": "₩" } },
+    "latlng": [40.0, 127.0],
+    "area": 120538.0,
+    "borders": ["CHN", "KOR", "RUS"],
+    "population": 25778816,
+    "flags": { "png": "https://flagcdn.com/w320/kp.png", "alt": "Flag of North Korea." },
+    "maps": { "googleMaps": "https://goo.gl/maps/dwt6gExEfMQzAVm89" }
+  },
+  {
+    "name": {
+      "common": "Bouvet Island",
+      "official": "Bouvet Island"
+    },
+    "cca2": "BV",
+    "cca3": "BVT",
+    "region": "Antarctic",
+    "latlng": [-54.43333333, 3.4],
+    "area": 49.0,
+    "population": 0,
+    "flags": { "png": "https://flagcdn.com/w320/bv.png", "alt": "" },
+    "maps": { "googleMaps": "https://goo.gl/maps/mawBhV9SP3RDU6Dp7" }
+  }
+]

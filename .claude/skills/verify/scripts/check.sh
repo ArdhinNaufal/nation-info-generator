@@ -25,21 +25,8 @@ run() {
 echo "nation-info-generator :: verification check"
 echo "-------------------------------------------"
 
-# --- Wire these up (delete the stub block below when you do) -------------------------------
-# Examples:
-#   run "lint"  npm run lint
-#   run "test"  npm test
-# or:
-#   run "lint"  ruff check .
-#   run "test"  pytest -q
-# -------------------------------------------------------------------------------------------
-
-# --- Stub: remove once real checks exist ---------------------------------------------------
-echo "==> no checks wired yet"
-echo "    Edit .claude/skills/verify/scripts/check.sh and fill in the project's lint/test commands."
-echo "    Then update CLAUDE.md's 'Environment mechanics' section to match."
-fail=1
-# -------------------------------------------------------------------------------------------
+run "typecheck" npm run lint
+run "test"      npm test
 
 echo "-------------------------------------------"
 if [ "$fail" -eq 0 ]; then

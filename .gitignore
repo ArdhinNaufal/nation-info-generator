@@ -1,3 +1,9 @@
 # Per-user local Claude Code config (permissions etc.) — not shared
 .claude/settings.local.json
 CLAUDE.local.md
+
+# Node / Vite
+node_modules/
+dist/
+*.local
+*.tsbuildinfo
