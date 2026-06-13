@@ -7,8 +7,8 @@
 
 ## What this project is
 
-nation-info-generator — TODO(spec): one sentence, filled in once SPEC.md exists.
-The product is **not yet decided**; it comes out of the §4.1 spec interview. See `SPEC.md`.
+nation-info-generator — a client-side web app (Vite + React + TS, no backend) that turns a
+country into a downloadable, fully customizable **wallpaper PNG** of its facts. See `SPEC.md`.
 
 ## The workflow (every task runs this loop)
 

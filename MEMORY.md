@@ -23,5 +23,10 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-13 — Product specified (see SPEC.md). Client-side Vite + React + TS SPA, no backend.
+  Generates a downloadable wallpaper PNG of a country's facts via Canvas. Data: live REST
+  Countries v3.1 (no key, CORS); canonical id = ISO alpha-2, input accepts name/alpha-2/alpha-3.
+  Customization v1 = theme presets + color overrides + font selection + per-field show/hide +
+  layout presets (NOT drag-and-drop). Saved designs in localStorage. Tests run offline on fixtures.
 - 2026-06-13 — Adopted the AI-SDLC workflow scaffold (convergent architecture, §4.7).
   Product intentionally undecided; to be specified via the spec interview.
