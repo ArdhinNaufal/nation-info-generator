@@ -53,8 +53,9 @@ const BODY = '"Inter", system-ui, sans-serif';
 const VSTRIP_U = 4.2;
 // Gap between the vertical-text strip and the content column, in `u` units.
 const VGAP_U = 2.2;
-// Upper panel's share of the canvas height (the rest goes to the fact cards below).
-const UPPER_FRACTION = 0.5;
+// Upper panel's share of the canvas height (the rest goes to the fact cards below). Tuned to
+// the default upper-content text scale (~0.85×), which renders the stats/name more compactly.
+const UPPER_FRACTION = 0.45;
 
 const fmtInt = (n: number): string => Math.round(n).toLocaleString('en-US');
 

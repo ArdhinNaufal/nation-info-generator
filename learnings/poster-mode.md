@@ -37,12 +37,15 @@
 - **Cause(s):** two compounding ones. (a) The map was *requested* at one aspect (0.4W×0.3H) but
   *drawn* into a differently-shaped slot, and `drawCover` crops the overflow. (b) A fixed
   area→zoom table ignores the map's pixel width, so the same area can over- or under-fill.
-- **Fix:** one geometry source (`upperGeometry` → `mapSlotSize`) so the request matches the slot
-  exactly; draw the map **contained** (centered, never cropped) over a dark backing; and bias
-  `zoomForArea` one step wider. REST Countries (v5) exposes only `latlng` (centroid) + `area`, no
-  bbox — so a *perfect* fit isn't possible client-side; the wider bias trades some empty margin
-  (neighbours visible) for never clipping the country. If a bbox source is added later, switch to
-  Geoapify's `area=rect:lon1,lat1,lon2,lat2` for an exact fit.
+- **Fix (final):** REST Countries (v5) exposes only `latlng` (centroid) + `area`, no bbox, so
+  centroid+zoom can't fit a country reliably. We now **geocode the bbox from Geoapify**
+  (`fetchCountryBbox`, same key as the static map) and request `area=rect:lon1,lat1,lon2,lat2`
+  (`buildMapUrlFromBbox`, +6% pad) — Geoapify expands the rect to the image aspect, so the whole
+  territory shows. Supporting pieces still matter: one geometry source (`upperGeometry` →
+  `mapSlotSize`) so the request aspect matches the slot, and drawing the map **contained**
+  (centered, never cropped). The old centroid+zoom (`zoomForArea`, biased wide) is the fallback
+  when the geocode fails. **Caveat:** a country's geocoded bbox may include remote territory
+  (overseas regions, far islands) and shrink the mainland — acceptable, but watch for it.
 
 ## Decode images and draw in *separate* effects so render-only tweaks don't refetch
 - **Date:** 2026-06-14

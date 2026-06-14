@@ -17,7 +17,7 @@ import {
 import { mapSlotSize } from '../render/poster';
 import { fetchGdp } from '../services/worldbank';
 import { fetchPhoto } from '../services/unsplashService';
-import { buildMapUrl } from '../services/geoapifyService';
+import { buildMapUrl, buildMapUrlFromBbox, fetchCountryBbox } from '../services/geoapifyService';
 import CountryInput from './CountryInput';
 import KeySettings from './KeySettings';
 import PosterPreview, { type PosterImages } from './PosterPreview';
@@ -71,8 +71,8 @@ export default function PosterMode({ api }: Props) {
   const [keys, setKeysState] = useState<PosterKeys>(() => getKeys());
   const [sizeId, setSizeId] = useState('mobile'); // portrait best matches the poster (§9)
   const [customSize, setCustomSize] = useState({ width: 1080, height: 1920 });
-  const [upperScale, setUpperScale] = useState(1); // upper-section text size
-  const [factsScale, setFactsScale] = useState(1); // fact-card text size
+  const [upperScale, setUpperScale] = useState(0.85); // upper-section text size
+  const [factsScale, setFactsScale] = useState(0.7); // fact-card text size
 
   // Monotonic run id: a newer country/regenerate invalidates any in-flight generation so a
   // slow pipeline can't render one country's data under another (guards rapid switching).
@@ -131,8 +131,9 @@ export default function PosterMode({ api }: Props) {
     const query = form.unsplashQuery.trim() || `${c.nameCommon} landscape`;
     const facts = parseFacts(form.factsText);
 
-    // World Bank (no key) and Unsplash run in parallel; Unsplash retries once with a fallback.
-    const [gdpRes, photo] = await Promise.all([
+    // World Bank (no key), Unsplash, and the Geoapify country bbox run in parallel. Unsplash
+    // retries once with a fallback; the bbox lets the map fit the whole territory exactly.
+    const [gdpRes, photo, bbox] = await Promise.all([
       fetchGdp(c.cca2).catch(() => ({ gdp: null, gdpPpp: null })),
       k.unsplash
         ? (async () => {
@@ -146,16 +147,21 @@ export default function PosterMode({ api }: Props) {
             }
           })()
         : Promise.resolve(null),
+      k.geoapify && c.latlng
+        ? fetchCountryBbox(c.nameCommon, k.geoapify).catch(() => null)
+        : Promise.resolve(null),
     ]);
     if (stale()) return; // a newer country/regenerate superseded this run
 
-    // Geoapify: build the map URL; PosterPreview decodes it (renderer shows "Map unavailable"
-    // if the image fails or no URL was produced).
+    // Geoapify map: prefer the geocoded bbox (exact fit); fall back to centroid+zoom if it's
+    // missing. PosterPreview decodes the URL (renderer shows "Map unavailable" if it fails).
     let geoapifyUrl = '';
     if (k.geoapify && c.latlng) {
       // Request the map at the exact slot size so its aspect matches and nothing is cropped.
       const slot = mapSlotSize(size);
-      geoapifyUrl = buildMapUrl(c.latlng[0], c.latlng[1], c.area, slot.width, slot.height, k.geoapify);
+      geoapifyUrl = bbox
+        ? buildMapUrlFromBbox(bbox, slot.width, slot.height, k.geoapify)
+        : buildMapUrl(c.latlng[0], c.latlng[1], c.area, slot.width, slot.height, k.geoapify);
     }
 
     const next: PosterCache = {

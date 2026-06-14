@@ -43,6 +43,17 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-14 — **Poster Mode tuning pass (3) — exact map fit + smaller defaults.** The
+  centroid+zoom heuristic kept clipping tall nations, so the map now **geocodes the country's
+  bounding box** (`fetchCountryBbox` → Geoapify geocoding, *same key* as the static map) and
+  requests `area=rect:lon1,lat1,lon2,lat2` (`buildMapUrlFromBbox`, +6% pad) for an exact fit;
+  `zoomForArea`/`buildMapUrl` remain as the fallback when the geocode fails. bbox fetch joins the
+  GDP/Unsplash `Promise.all`. Default text scales lowered (upper 0.85×, facts 0.70×) and
+  `UPPER_FRACTION` 0.50→0.45 to match the more compact upper text and give facts more room. 64
+  tests (added `buildMapUrlFromBbox` cases; `fetchCountryBbox` is network-only, untested per
+  CRITICAL-RULES #3). Caveat: a country's geocoded bbox can include far-flung territory (e.g. an
+  overseas region) and over-zoom the mainland — acceptable for now; note it if it surfaces.
+
 - 2026-06-14 — **Poster Mode tuning pass (2).** (1) `zoomForArea` biased one *more* step wider
   (Norway→3) — the prior bias still clipped tall nations because the map slot is landscape-ish and
   REST Countries' centroid sits south of the far north; neighbours showing is acceptable per the

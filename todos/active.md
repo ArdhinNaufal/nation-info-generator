@@ -21,8 +21,9 @@
       (<900px) falls back to normal scrolling.
 - [ ] Long landmark name+description wraps to 2 lines in the left strip (ellipsis only if longer);
       a long currency name and a long Off. Lang. list wrap instead of showing `…`.
-- [ ] Map shows the full territory (try `Norway`, `Chile`, `Russia`); nothing cropped (zoom is
-      biased wide, so neighbouring countries are expected to show).
+- [ ] Map fits the full territory via the geocoded bbox (try `Norway`, `Chile`, `New Zealand`);
+      nothing cropped. Watch for countries whose bbox includes remote territory over-zooming the
+      mainland (e.g. overseas regions); the centroid+zoom fallback applies if the geocode fails.
 - [ ] Gap is visible between the rotated landmark strip and the flag/stats column.
 - [ ] Upper panel is shorter / fact cards have more room than before.
 - [ ] Preview zoom (−/%/+) scales the on-screen poster and scrolls when zoomed in; Download still
