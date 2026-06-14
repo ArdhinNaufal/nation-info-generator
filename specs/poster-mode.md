@@ -24,9 +24,10 @@ Users: anyone who wants a rich, visually-striking country poster, not just a fac
 
 The canvas is divided into two vertical zones.
 
-### 2a. Upper section (~55% of canvas height)
+### 2a. Upper section (~50% of canvas height)
 
-Two sub-columns inside a dark-translucent panel:
+Two sub-columns inside a dark-translucent panel (a gap separates the far-left vertical-text
+strip from the content column so the rotated text doesn't crowd the flag/stats):
 
 **Left sub-column** (≈40% of canvas width):
 - Country flag image (top, aspect ratio preserved, ≈38% of left-column width)
@@ -51,7 +52,7 @@ Two sub-columns inside a dark-translucent panel:
     column's `Ccy` value) **wraps onto further lines** rather than clipping — both are
     the last item in their column, so there is room.
 
-### 2b. Lower section (~45% of canvas height)
+### 2b. Lower section (~50% of canvas height)
 
 Vertically stacked **prose fact cards**. Each card:
 - Slight black-translucent background (same style as upper panel but per-card)
@@ -220,6 +221,10 @@ then sit fully in frame with neighbours visible.
 
 **Text size:** two sliders (0.70–1.60×) scale the upper-section text and the fact-card text
 independently. They re-render live without re-fetching images.
+
+**Preview zoom:** the result card has a view-only zoom (0.5–4×, −/%/+); the canvas scales inside
+a scrollable wrapper. This affects the on-screen preview only — the exported PNG is always at the
+selected output size.
 
 ---
 

@@ -43,6 +43,17 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-14 — **Poster Mode tuning pass (2).** (1) `zoomForArea` biased one *more* step wider
+  (Norway→3) — the prior bias still clipped tall nations because the map slot is landscape-ish and
+  REST Countries' centroid sits south of the far north; neighbours showing is acceptable per the
+  user. (2) Added `VGAP_U` (a gap between the vertical landmark strip and the content column) so
+  the rotated text no longer crowds the flag/stats. (3) `UPPER_FRACTION` 0.55→0.50 — the upper
+  panel is shorter, giving the fact cards more height. (4) `PosterPreview` gained a view-only
+  **zoom control** (0.5–4×, −/%/+ buttons): the canvas scales via inline `max-width`/`max-height`
+  inside a `.poster-canvas-scroll` (overflow:auto) wrapper, so zooming in pans without touching
+  the canvas pixel resolution or the PNG export. Geometry constants live at the top of
+  `render/poster.ts`; `mapSlotSize`/`renderPoster` share `upperGeometry`. 62 tests.
+
 - 2026-06-14 — **Poster Mode layout + readability pass.** (1) The whole page is now
   non-scrolling: `.app` is a `100vh` flex column with `overflow:hidden`; only the left settings
   column (`.layout > div:nth-child(1)`) scrolls; the preview is capped at `calc(100vh - 240px)`.

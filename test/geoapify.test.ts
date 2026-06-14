@@ -4,19 +4,19 @@ import { zoomForArea, buildMapUrl } from '../src/services/geoapifyService';
 // Pure URL builder + zoom heuristic — deterministic, no network (CRITICAL-RULES #3).
 describe('geoapify zoom heuristic (full-territory bias)', () => {
   it('zooms out for very large countries', () => {
-    expect(zoomForArea(17_098_242)).toBe(3); // Russia
-    expect(zoomForArea(9_984_670)).toBe(3); // Canada
+    expect(zoomForArea(17_098_242)).toBe(2); // Russia
+    expect(zoomForArea(9_984_670)).toBe(2); // Canada
   });
 
-  it('fits an elongated mid-size nation like Norway one step wider (zoom 4)', () => {
-    expect(zoomForArea(323_802)).toBe(4); // Norway — the reported case
-    expect(zoomForArea(357_114)).toBe(4); // Germany
+  it('fits an elongated mid-size nation like Norway with room to spare (zoom 3)', () => {
+    expect(zoomForArea(323_802)).toBe(3); // Norway — the reported case
+    expect(zoomForArea(357_114)).toBe(3); // Germany
   });
 
   it('zooms in for small countries and city-states', () => {
-    expect(zoomForArea(103_000)).toBe(5); // Iceland
-    expect(zoomForArea(2_586)).toBe(6); // Luxembourg
-    expect(zoomForArea(719)).toBe(7); // Singapore
+    expect(zoomForArea(103_000)).toBe(4); // Iceland
+    expect(zoomForArea(2_586)).toBe(5); // Luxembourg
+    expect(zoomForArea(719)).toBe(6); // Singapore
   });
 
   it('is monotonic — bigger area never zooms in further than a smaller one', () => {
@@ -30,7 +30,7 @@ describe('geoapify buildMapUrl', () => {
   it('encodes center, zoom, size, and key', () => {
     const url = buildMapUrl(60.5, 8.5, 323_802, 452, 380, 'KEY123');
     expect(url).toContain('center=lonlat%3A8.5%2C60.5');
-    expect(url).toContain('zoom=4');
+    expect(url).toContain('zoom=3');
     expect(url).toContain('width=452');
     expect(url).toContain('height=380');
     expect(url).toContain('apiKey=KEY123');

@@ -21,7 +21,12 @@
       (<900px) falls back to normal scrolling.
 - [ ] Long landmark name+description wraps to 2 lines in the left strip (ellipsis only if longer);
       a long currency name and a long Off. Lang. list wrap instead of showing `…`.
-- [ ] Map shows the full territory (try `Norway`, `Chile`, `Russia`); nothing cropped.
+- [ ] Map shows the full territory (try `Norway`, `Chile`, `Russia`); nothing cropped (zoom is
+      biased wide, so neighbouring countries are expected to show).
+- [ ] Gap is visible between the rotated landmark strip and the flag/stats column.
+- [ ] Upper panel is shorter / fact cards have more room than before.
+- [ ] Preview zoom (−/%/+) scales the on-screen poster and scrolls when zoomed in; Download still
+      exports at the full selected size (zoom doesn't affect the PNG).
 - [ ] Upper/Facts text-size sliders rescale the right text live and do NOT re-fetch the photo
       (network tab shows no new image requests while dragging).
 

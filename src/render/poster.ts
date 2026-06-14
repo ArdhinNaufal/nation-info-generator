@@ -51,6 +51,10 @@ const BODY = '"Inter", system-ui, sans-serif';
 
 // Width of the far-left vertical-text strip, in `u` units. Wide enough for two stacked lines.
 const VSTRIP_U = 4.2;
+// Gap between the vertical-text strip and the content column, in `u` units.
+const VGAP_U = 2.2;
+// Upper panel's share of the canvas height (the rest goes to the fact cards below).
+const UPPER_FRACTION = 0.5;
 
 const fmtInt = (n: number): string => Math.round(n).toLocaleString('en-US');
 
@@ -99,6 +103,7 @@ interface UpperGeo {
   upH: number;
   ip: number;
   vStrip: number;
+  vGap: number;
   cX: number;
   cY: number;
   cW: number;
@@ -120,19 +125,20 @@ function upperGeometry(size: { width: number; height: number }): UpperGeo {
   const upX = pad;
   const upY = pad;
   const upW = W - pad * 2;
-  const upH = Math.round(H * 0.55) - Math.round(pad * 1.5);
+  const upH = Math.round(H * UPPER_FRACTION) - Math.round(pad * 1.5);
   const ip = Math.round(pad * 0.8);
   const vStrip = Math.round(u * VSTRIP_U);
-  const cX = upX + ip + vStrip;
+  const vGap = Math.round(u * VGAP_U);
+  const cX = upX + ip + vStrip + vGap;
   const cY = upY + ip;
-  const cW = upW - ip * 2 - vStrip;
+  const cW = upW - ip * 2 - vStrip - vGap;
   const cH = upH - ip * 2;
   const gap = ip;
   const leftW = cW * 0.4;
   const rightX = cX + leftW + gap;
   const rightW = cW - leftW - gap;
   const mapH = Math.round(cH * 0.42);
-  return { W, H, u, pad, upX, upY, upW, upH, ip, vStrip, cX, cY, cW, cH, gap, leftW, rightX, rightW, mapH };
+  return { W, H, u, pad, upX, upY, upW, upH, ip, vStrip, vGap, cX, cY, cW, cH, gap, leftW, rightX, rightW, mapH };
 }
 
 /**

@@ -33,10 +33,16 @@ interface DecodedImages {
   map?: CanvasImageSource;
 }
 
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 4;
+const ZOOM_STEP = 0.25;
+const clampZoom = (z: number): number => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+
 export default function PosterPreview({ input, images, size, fileBase }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [busy, setBusy] = useState(false);
   const [decoded, setDecoded] = useState<DecodedImages | null>(null);
+  const [zoom, setZoom] = useState(1); // preview-only display zoom (does not affect export)
 
   // Decode the images only when the URLs change — not on every text/size/scale tweak, so the
   // sliders redraw instantly without re-fetching the flag/photo/map.
@@ -94,17 +100,48 @@ export default function PosterPreview({ input, images, size, fileBase }: Props) 
     }
   };
 
+  // The canvas display size scales with `zoom`; at zoom 1 it fits the card, above 1 the
+  // surrounding container scrolls. The canvas's own pixel resolution (and the export) is
+  // unaffected — this is a view-only zoom.
+  const canvasStyle = {
+    maxWidth: `${zoom * 100}%`,
+    maxHeight: `calc((100vh - 280px) * ${zoom})`,
+  };
+
   return (
     <div className="preview-wrap">
       <div className="preview-meta">
         <span>
           Poster — {size.width}×{size.height}
         </span>
-        <button className="primary" onClick={download} disabled={busy}>
-          {busy ? 'Exporting…' : 'Download PNG'}
-        </button>
+        <div className="zoom-controls">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => clampZoom(z - ZOOM_STEP))}
+            disabled={zoom <= ZOOM_MIN}
+            aria-label="Zoom out"
+          >
+            −
+          </button>
+          <button type="button" onClick={() => setZoom(1)} title="Reset zoom">
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => clampZoom(z + ZOOM_STEP))}
+            disabled={zoom >= ZOOM_MAX}
+            aria-label="Zoom in"
+          >
+            +
+          </button>
+          <button className="primary" onClick={download} disabled={busy}>
+            {busy ? 'Exporting…' : 'Download PNG'}
+          </button>
+        </div>
       </div>
-      <canvas ref={canvasRef} />
+      <div className="poster-canvas-scroll">
+        <canvas ref={canvasRef} style={canvasStyle} />
+      </div>
     </div>
   );
 }

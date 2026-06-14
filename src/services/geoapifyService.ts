@@ -12,11 +12,11 @@ const BASE = 'https://maps.geoapify.com/v1/staticmap';
  * calibrated to the on-poster pixel width.
  */
 export function zoomForArea(area: number): number {
-  if (area > 2_500_000) return 3;
-  if (area > 250_000) return 4;
-  if (area > 25_000) return 5;
-  if (area > 2_500) return 6;
-  return 7;
+  if (area > 2_500_000) return 2;
+  if (area > 250_000) return 3;
+  if (area > 25_000) return 4;
+  if (area > 1_000) return 5;
+  return 6;
 }
 
 export function buildMapUrl(
