@@ -1,13 +1,16 @@
 # Poster Mode (specs/poster-mode.md)
 
-## Calling Anthropic directly from the browser needs an explicit opt-in header
+## Calling Anthropic directly from the browser needs an explicit opt-in header (SUPERSEDED)
 - **Date:** 2026-06-14
+- **Status:** **Superseded** later the same day — Poster Mode no longer calls Claude; the
+  landmark/facts are typed by the user (`services/claudePoster.ts` deleted). Kept as a reference
+  for anyone who reintroduces a browser-direct Anthropic call.
 - **Symptom:** `POST https://api.anthropic.com/v1/messages` from the browser fails with a CORS
   error even with a valid `x-api-key`.
 - **Cause:** Anthropic blocks direct browser calls by default (it expects calls from a server).
 - **Rule:** send `anthropic-dangerous-direct-browser-access: true` alongside `x-api-key` and
-  `anthropic-version`. See `services/claudePoster.ts`. This is acceptable here only because the
-  app is explicitly user-keyed and client-side (spec §11) — the user owns the key.
+  `anthropic-version`. This is acceptable only because the app is explicitly user-keyed and
+  client-side (spec §11) — the user owns the key.
 
 ## Extend the shared RenderTarget instead of forking it
 - **Date:** 2026-06-14

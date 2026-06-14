@@ -10,7 +10,6 @@ interface Props {
 }
 
 const FIELDS: Array<{ name: keyof PosterKeys; label: string; help: string }> = [
-  { name: 'anthropic', label: 'Anthropic Key', help: 'Landmark text + facts (Claude).' },
   { name: 'unsplash', label: 'Unsplash Access Key', help: 'Background landmark photo.' },
   { name: 'geoapify', label: 'Geoapify API Key', help: 'Country map snapshot.' },
 ];
@@ -27,7 +26,7 @@ export default function KeySettings({ onClose, onSaved }: Props) {
 
   const clearAll = () => {
     clearKeys();
-    const empty: PosterKeys = { anthropic: '', unsplash: '', geoapify: '' };
+    const empty: PosterKeys = { unsplash: '', geoapify: '' };
     setDraft(empty);
     onSaved(empty);
   };

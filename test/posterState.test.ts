@@ -18,7 +18,7 @@ function memStorage(): StorageLike {
   };
 }
 
-const keys: PosterKeys = { anthropic: 'sk-ant-123', unsplash: 'unsp-456', geoapify: 'geo-789' };
+const keys: PosterKeys = { unsplash: 'unsp-456', geoapify: 'geo-789' };
 
 describe('poster key store (specs/poster-mode.md §5)', () => {
   it('round-trips keys and reports present vs missing', () => {
@@ -31,14 +31,14 @@ describe('poster key store (specs/poster-mode.md §5)', () => {
     const s = memStorage();
     setKeys(keys, s);
     clearKeys(s);
-    expect(getKeys(s)).toEqual({ anthropic: '', unsplash: '', geoapify: '' });
+    expect(getKeys(s)).toEqual({ unsplash: '', geoapify: '' });
   });
 
   it('an empty value removes (does not store) that key', () => {
     const s = memStorage();
     setKeys({ ...keys, unsplash: '' }, s);
     expect(getKeys(s).unsplash).toBe('');
-    expect(getKeys(s).anthropic).toBe('sk-ant-123');
+    expect(getKeys(s).geoapify).toBe('geo-789');
   });
 
   it('masks a key to its last 4 chars and never reveals the rest', () => {
@@ -48,7 +48,7 @@ describe('poster key store (specs/poster-mode.md §5)', () => {
   });
 
   it('degrades to empty keys when storage is unavailable', () => {
-    expect(getKeys(null)).toEqual({ anthropic: '', unsplash: '', geoapify: '' });
+    expect(getKeys(null)).toEqual({ unsplash: '', geoapify: '' });
   });
 });
 

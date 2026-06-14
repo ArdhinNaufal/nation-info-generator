@@ -75,6 +75,7 @@ label {
 
 input[type='text'],
 input[type='number'],
+textarea,
 select {
   width: 100%;
   padding: 9px 10px;
@@ -84,6 +85,11 @@ select {
   color: var(--text);
   font: inherit;
   font-size: 14px;
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.5;
 }
 
 .row {

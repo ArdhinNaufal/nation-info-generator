@@ -4,16 +4,14 @@
 
 import type { StorageLike } from './storage';
 
-export type PosterKeyName = 'anthropic' | 'unsplash' | 'geoapify';
+export type PosterKeyName = 'unsplash' | 'geoapify';
 
 const STORAGE_KEYS: Record<PosterKeyName, string> = {
-  anthropic: 'poster_key_anthropic',
   unsplash: 'poster_key_unsplash',
   geoapify: 'poster_key_geoapify',
 };
 
 export interface PosterKeys {
-  anthropic: string;
   unsplash: string;
   geoapify: string;
 }
@@ -39,7 +37,7 @@ export function getKeys(storage: StorageLike | null = defaultStorage()): PosterK
       return '';
     }
   };
-  return { anthropic: read('anthropic'), unsplash: read('unsplash'), geoapify: read('geoapify') };
+  return { unsplash: read('unsplash'), geoapify: read('geoapify') };
 }
 
 export function setKeys(keys: PosterKeys, storage: StorageLike | null = defaultStorage()): void {

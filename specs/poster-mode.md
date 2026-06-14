@@ -2,6 +2,11 @@
 
 > Status: **specified** (2026-06-14). Produced via spec-interview.
 > Implement in a **fresh session** containing only this spec + CLAUDE.md.
+>
+> **Amendment (2026-06-14):** the landmark name/description, photo-search query, and facts are
+> now **typed by the user** in a "Poster content" form, not fetched from Claude. Only the photo
+> (Unsplash), map (Geoapify), and GDP (World Bank) are fetched. References to the Anthropic /
+> Claude step below are superseded by the manual form — kept for historical context.
 
 ---
 
@@ -69,12 +74,13 @@ One generation run performs these fetches in parallel where possible:
 |------|---------|------|-------------|
 | 1 | REST Countries v5 (already wired) | Yes (env) | Flag URL, capital, population, area, region, subregion, languages, currencies, lat/lng |
 | 2 | World Bank API | No | GDP (`NY.GDP.MKTP.CD`) and GDP per capita PPP (`NY.GDP.PCAP.PP.CD`) — most recent year |
-| 3 | Anthropic (Claude `claude-sonnet-4-6`) | User-supplied | Landmark name, landmark description, Unsplash search query, array of up to 7 facts |
-| 4 | Unsplash API | User-supplied | One photo matching Claude's search query (largest available size); photographer name+link for attribution |
+| 3 | **User input** (Poster content form) | — | Landmark name, landmark description, Unsplash search query, up to 7 facts (one per line). Facts pre-filled from REST Countries fields as a starting point. |
+| 4 | Unsplash API | User-supplied | One photo matching the user's search query (largest available size); photographer name+link for attribution |
 | 5 | Geoapify Static Maps | User-supplied | PNG map image centered on country lat/lng, OSM-carto style, country boundaries naturally rendered |
 
-Steps 2, 3, 4, 5 may all start in parallel once the country is resolved. Step 4 depends on
-the Unsplash search query emitted by step 3 — wait for step 3 before firing step 4.
+The user fills the content form (step 3), then clicks **Generate poster**. Steps 2, 4, 5 fire
+on Generate: World Bank (2) and Unsplash (4) run in parallel; Unsplash uses the query from the
+form. A cache hit on country resolve renders immediately and skips all of these.
 
 ---
 
@@ -88,25 +94,13 @@ GET https://api.worldbank.org/v2/country/{alpha2_lower}/indicator/{INDICATOR}?fo
 - `data[1][0].value` is the most recent value (may be `null` for small territories).
 - If `null` or request fails → omit that stat from the poster (show nothing in that slot).
 
-### Anthropic (Claude)
-```
-POST https://api.anthropic.com/v1/messages
-Headers: x-api-key: {userKey}, anthropic-version: 2023-06-01, content-type: application/json
-```
-Request body:
-```json
-{
-  "model": "claude-sonnet-4-6",
-  "max_tokens": 800,
-  "system": "You generate structured JSON content for a country info poster. Output valid JSON only — no markdown, no explanation.",
-  "messages": [{
-    "role": "user",
-    "content": "Country: {nameCommon} ({alpha2})\n\nReturn JSON with exactly these keys:\n- landmark_name: string — the single most iconic landmark or tourist destination\n- landmark_description: string — one sentence (max 120 chars) describing it and its location within the country\n- unsplash_query: string — a specific Unsplash search query to find a striking photo of this landmark\n- facts: string[] — exactly 7 interesting facts about the country, each 1-2 sentences, no bullet points"
-  }]
-}
-```
-Parse the response as JSON. If parsing fails or keys are missing → degrade (use field-based
-facts, blank landmark, fallback photo query `{nameCommon} landscape`).
+### Poster content (manual)
+No API. The user types these in the "Poster content" form; they are stored in the cache record
+verbatim and rendered directly:
+- `landmarkName` — the iconic landmark (drives the left-edge vertical text).
+- `landmarkDescription` — one sentence shown after the landmark name.
+- `unsplashQuery` — the photo search string (blank → fall back to `{nameCommon} landscape`).
+- `facts` — one per line, up to 7 (blank → field-based facts from REST Countries).
 
 ### Unsplash
 ```
@@ -142,9 +136,9 @@ If request fails → render the map slot as a solid dark rectangle with text
 ## 5. API key management
 
 **Settings screen** — accessible via a gear icon / "Settings" link visible in Poster Mode.
-Three fields: Anthropic Key, Unsplash Access Key, Geoapify API Key.
-- Keys are saved to `localStorage` under keys `poster_key_anthropic`,
-  `poster_key_unsplash`, `poster_key_geoapify`.
+Two fields: Unsplash Access Key, Geoapify API Key. (No Anthropic key — the landmark/facts are
+typed by the user.)
+- Keys are saved to `localStorage` under keys `poster_key_unsplash`, `poster_key_geoapify`.
 - A **"Clear all keys"** button wipes all three.
 - Settings screen also shows which keys are present (masked) vs missing.
 - If a key is missing when generation is triggered → show an inline error directing the
@@ -184,12 +178,13 @@ interface PosterCache {
 
 ## 7. Generation trigger
 
-- Auto-generate when a country is resolved (same trigger as the existing mode's render).
-- Show a **loading skeleton** (grey placeholder rectangles in the poster layout) while
-  any fetch is in flight.
-- Once all fetches complete (or gracefully degrade), render the final poster.
-- **Regenerate** button always visible in poster mode; clears cache for this country and
-  re-triggers.
+- On country resolve: a **cache hit** fills the form + renders immediately; a **miss** pre-fills
+  the content form (starter facts) and waits for the user.
+- The user clicks **Generate poster** to fetch the photo/map/GDP and render. The button also
+  serves as Regenerate (it clears this country's cache and re-runs from the current form).
+- Show a **loading skeleton** (grey placeholder rectangles in the poster layout) while the
+  fetches are in flight.
+- Once the fetches complete (or gracefully degrade), render the final poster.
 
 ---
 
@@ -199,7 +194,7 @@ interface PosterCache {
 |---------|-----|---------|
 | Background photo | Unsplash | Solid `rgba(20,20,20,1)` with no attribution line |
 | Map | Geoapify | Dark rectangle + `Map unavailable` in white |
-| Landmark text / facts | Claude | Left-column vertical text: country name only; lower section: field-based facts from REST Countries |
+| Landmark text / facts | User input | Blank landmark → no vertical text; empty facts box → field-based facts from REST Countries |
 | GDP / GDP Per Capita | World Bank | Omit those stat rows from the left column; remaining stats shift up |
 | Photographer credit | Unsplash | Omit the credit line |
 
@@ -225,7 +220,6 @@ of canvas height, both rounded to nearest integer.
 src/render/poster.ts          — pure render(ctx, PosterInput, size) function
                                 (RenderTarget interface, testable with recording fake)
 src/services/worldbank.ts     — fetchGdp(alpha2): Promise<{gdp, gdpPpp}>
-src/services/claudePoster.ts  — fetchPosterContent(country, key): Promise<PosterContent>
 src/services/unsplashService.ts — fetchPhoto(query, key): Promise<UnsplashPhoto>
 src/services/geoapifyService.ts — buildMapUrl(lat, lng, area, mapW, mapH, key): string
 src/state/posterCache.ts      — getPosterCache / setPosterCache / clearPosterCache
@@ -271,19 +265,20 @@ interface PosterInput {
 
 Steps the owner can judge personally (no code reading required):
 
-1. **Settings flow**: Open Poster Mode → click Settings → enter Anthropic, Unsplash, and
-   Geoapify keys → save → masked keys appear in Settings → return to poster.
+1. **Settings flow**: Open Poster Mode → click Settings → enter Unsplash and Geoapify keys →
+   save → masked keys appear in Settings → return to poster.
 
-2. **Generation happy path**: Enter `Norway` → poster auto-generates → upper section shows
-   flag, GDP, population, area, currency, landmark vertical text, map, region, capital,
-   language → lower section shows 7 prose facts → background is a photo of a Norwegian
-   landmark → photographer credit appears bottom-right.
+2. **Generation happy path**: Enter `Norway` → fill the Poster content form (landmark, one-line
+   description, photo query, facts) → click Generate poster → upper section shows flag, GDP,
+   population, area, currency, the landmark vertical text you typed, map, region, capital,
+   language → lower section shows your facts (≤7) → background is the Unsplash photo for your
+   query → photographer credit appears bottom-right.
 
 3. **Cache hit**: Switch to a different country, then switch back to `Norway` →
-   poster renders immediately without any loading state (no new API calls fired).
+   poster + form repopulate immediately without any loading state (no new API calls fired).
 
-4. **Regenerate**: Click Regenerate on Norway → loading skeleton appears → new Unsplash
-   photo and new Claude text generated → cache updated.
+4. **Regenerate**: Edit the content or query → click Generate poster → loading skeleton appears
+   → new Unsplash photo + your edited text rendered → cache updated.
 
 5. **Degradation — bad Unsplash key**: Set Unsplash key to `bad` → generate any country →
    background is solid dark, no photo, no credit → warning banner shown → other sections
@@ -299,7 +294,7 @@ Steps the owner can judge personally (no code reading required):
 8. **Existing mode unaffected**: Switch to the existing generator tab → enter a country →
    Classic/Sidebar/Grid/Minimal layouts render as before, with no regression.
 
-9. **Test suite**: `bash .claude/skills/verify/scripts/check.sh` passes (lint + existing 30
-   tests). New `test/poster.render.test.ts` tests `render/poster.ts` offline (recording
-   fake ctx, no live API calls) covering: landmark text drawn, fact count ≤ 7, GDP
-   formatted correctly, missing GDP renders no blank row.
+9. **Test suite**: `bash .claude/skills/verify/scripts/check.sh` passes (lint + tests).
+   `test/poster.render.test.ts` tests `render/poster.ts` offline (recording fake ctx, no live
+   API calls) covering: landmark text drawn, fact count ≤ 7, GDP formatted correctly, missing
+   GDP renders no blank row. `test/posterState.test.ts` covers the two-key store + cache.

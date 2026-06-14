@@ -43,6 +43,17 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-14 — **Dropped the browser-direct Claude call from Poster Mode**; the landmark
+  name/description, photo-search query, and facts are now **typed by the user** in a "Poster
+  content" form (`PosterMode.tsx`). Deleted `services/claudePoster.ts` and the `anthropic` key
+  (`keyStore` is now Unsplash + Geoapify only). Flow changed from "auto-generate on resolve" to
+  "fill the form → **Generate poster**" (the button doubles as Regenerate: clears this country's
+  cache, re-fetches photo/map/GDP from the current form). Facts textarea pre-fills with
+  field-based facts as a starting point; a cache hit on resolve repopulates the form + renders
+  instantly. `PosterCache` shape unchanged (the text fields are now user-entered, not Claude).
+  Renderer (`render/poster.ts`) and `PosterPreview` untouched. 50 tests (key store now asserts
+  two keys). The §11 "no secrets" posture improves: no AI key leaves the browser at all now.
+
 - 2026-06-14 — Built **Poster Mode** (`specs/poster-mode.md`): a second tab generating a
   magazine-style portrait poster (landmark-photo background, flag + World-Bank GDP stats, map
   snapshot, Claude-written facts). Render is a pure `renderPoster(ctx, PosterInput, size)` in
