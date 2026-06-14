@@ -54,8 +54,8 @@ const VSTRIP_U = 4.2;
 // Gap between the vertical-text strip and the content column, in `u` units.
 const VGAP_U = 2.2;
 // Upper panel's share of the canvas height (the rest goes to the fact cards below). Tuned to
-// the default upper-content text scale (~0.85×), which renders the stats/name more compactly.
-const UPPER_FRACTION = 0.45;
+// the default upper-content text scale (~0.70×), which renders the stats/name compactly.
+const UPPER_FRACTION = 0.4;
 
 const fmtInt = (n: number): string => Math.round(n).toLocaleString('en-US');
 
@@ -266,32 +266,6 @@ function drawContain(
   return dh;
 }
 
-// Contain an image centered in a box (aspect preserved, nothing cropped). Used for the map so
-// the full country territory is always visible (specs/poster-mode.md §2a).
-function drawContainCentered(
-  ctx: RenderTarget,
-  img: CanvasImageSource,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-): void {
-  const { w: iw, h: ih } = imgDims(img);
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
-  ctx.clip();
-  if (iw > 0 && ih > 0) {
-    const scale = Math.min(w / iw, h / ih);
-    const dw = iw * scale;
-    const dh = ih * scale;
-    ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-  } else {
-    ctx.drawImage(img, x, y, w, h);
-  }
-  ctx.restore();
-}
-
 // --- the renderer --------------------------------------------------------------------------
 
 /**
@@ -389,11 +363,13 @@ export function renderPoster(
   }
   ry += u * 1.5 * us;
 
-  // Map snapshot — contained (never cropped) over a dark backing so the whole territory shows.
+  // Map snapshot — fills the slot edge-to-edge. The map is requested with an `area=rect:` bbox
+  // fit (see services/geoapifyService), so the whole country already sits inside the returned
+  // image (which matches the slot aspect); cover-fill therefore fills without cropping territory.
   if (input.mapImage) {
     ctx.fillStyle = 'rgba(20, 20, 20, 1)';
     ctx.fillRect(rightX, ry, rightW, mapH);
-    drawContainCentered(ctx, input.mapImage, rightX, ry, rightW, mapH);
+    drawCover(ctx, input.mapImage, rightX, ry, rightW, mapH);
   } else {
     ctx.fillStyle = 'rgba(20, 20, 20, 1)';
     ctx.fillRect(rightX, ry, rightW, mapH);

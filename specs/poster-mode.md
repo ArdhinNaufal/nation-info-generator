@@ -24,7 +24,7 @@ Users: anyone who wants a rich, visually-striking country poster, not just a fac
 
 The canvas is divided into two vertical zones.
 
-### 2a. Upper section (~45% of canvas height)
+### 2a. Upper section (~40% of canvas height)
 
 Two sub-columns inside a dark-translucent panel (a gap separates the far-left vertical-text
 strip from the content column so the rotated text doesn't crowd the flag/stats):
@@ -44,7 +44,9 @@ strip from the content column so the rotated text doesn't crowd the flag/stats):
 
 **Right sub-column** (≈60% of canvas width):
 - Country **name** — large, bold, white, top-right
-- **Map snapshot** image — rectangular, fills most of the right column width
+- **Map snapshot** image — rectangular, **fills** its slot edge-to-edge (cover). The
+  `area=rect:` bbox fit frames the whole country inside the returned image, so cover-fill
+  fills the rectangle without cropping the territory.
 - Below the map, two columns of short facts (right-aligned labels, bold values):
   - Left cell: `Region:` + bold region name
   - Right cell: `Capital:` + bold capital name
@@ -52,7 +54,7 @@ strip from the content column so the rotated text doesn't crowd the flag/stats):
     column's `Ccy` value) **wraps onto further lines** rather than clipping — both are
     the last item in their column, so there is room.
 
-### 2b. Lower section (~55% of canvas height)
+### 2b. Lower section (~60% of canvas height)
 
 Vertically stacked **prose fact cards**. Each card:
 - Slight black-translucent background (same style as upper panel but per-card)
@@ -221,7 +223,7 @@ REST Countries gives no bbox. If the geocode fails we fall back to the centroid+
 (`zoomForArea`, biased wide so elongated nations still mostly fit).
 
 **Text size:** two sliders (0.70–1.60×) scale the upper-section text and the fact-card text
-independently (defaults: upper 0.85×, facts 0.70×). They re-render live without re-fetching
+independently (defaults: upper 0.70×, facts 0.70×). They re-render live without re-fetching
 images.
 
 **Preview zoom:** the result card has a view-only zoom (0.5–4×, −/%/+); the canvas scales inside

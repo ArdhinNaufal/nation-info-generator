@@ -71,7 +71,7 @@ export default function PosterMode({ api }: Props) {
   const [keys, setKeysState] = useState<PosterKeys>(() => getKeys());
   const [sizeId, setSizeId] = useState('mobile'); // portrait best matches the poster (§9)
   const [customSize, setCustomSize] = useState({ width: 1080, height: 1920 });
-  const [upperScale, setUpperScale] = useState(0.85); // upper-section text size
+  const [upperScale, setUpperScale] = useState(0.7); // upper-section text size
   const [factsScale, setFactsScale] = useState(0.7); // fact-card text size
 
   // Monotonic run id: a newer country/regenerate invalidates any in-flight generation so a

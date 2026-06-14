@@ -43,6 +43,13 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-14 — **Poster Mode tuning pass (4).** Default upper text scale 0.85→0.70 and
+  `UPPER_FRACTION` 0.45→0.40 (shorter upper panel → more fact space). Map now **cover-fills** its
+  slot (`drawCover`) instead of contain — safe because the `area=rect:` bbox fit frames the whole
+  country inside the slot-aspect image, so fill crops nothing. Removed the now-unused
+  `drawContainCentered`. The landmark-wrap test label was shortened so it still spans two lines in
+  the (shorter) strip. 64 tests.
+
 - 2026-06-14 — **Poster Mode tuning pass (3) — exact map fit + smaller defaults.** The
   centroid+zoom heuristic kept clipping tall nations, so the map now **geocodes the country's
   bounding box** (`fetchCountryBbox` → Geoapify geocoding, *same key* as the static map) and

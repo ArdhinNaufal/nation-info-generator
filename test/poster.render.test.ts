@@ -138,8 +138,7 @@ describe('text wrapping instead of clipping (no ellipsis when it fits)', () => {
       ctx,
       baseInput({
         landmarkName: 'Geirangerfjord',
-        landmarkDescription:
-          'a deep blue UNESCO World Heritage fjord in the western fjordlands region highlands',
+        landmarkDescription: 'a deep blue fjord in the scenic western highlands',
       }),
       SIZE,
     );
