@@ -1,48 +1,44 @@
-// Fetch + normalize REST Countries v3.1, and resolve user input (name / alpha-2 / alpha-3) to
-// a country. We deliberately avoid the heavy `/v3.1/all` endpoint — it is frequently
-// throttled and its error responses omit CORS headers (browsers then report a misleading
-// "CORS policy" failure). Instead we use the lightweight, CORS-enabled per-resource endpoints
-// `/alpha` and `/name`.
-//
-// Resolution is expressed against a `CountryApi` interface (dependency-injected) so the exact
-// logic we ship is the logic tested offline against fixtures (CRITICAL-RULES #3) — no live
-// calls in tests.
+// Fetch + normalize REST Countries v5, and resolve user input (name / alpha-2 / alpha-3) to
+// a country. All queries go through a single `?q=` search endpoint; alpha-code lookups are
+// filtered client-side (v5 has no dedicated code endpoint). Resolution is expressed against a
+// `CountryApi` interface (dependency-injected) so the exact logic we ship is the logic tested
+// offline against fixtures (CRITICAL-RULES #3) — no live calls in tests.
 
 import type { Country, Currency, NativeName } from './types';
 
 // In dev we route through the Vite proxy (see vite.config.ts) to dodge CORS while developing
 // on localhost; in production we call the CORS-enabled endpoints directly.
-const API_BASE = import.meta.env.DEV ? '/rc' : 'https://api.restcountries.com/v3.1';
+const API_BASE = import.meta.env.DEV ? '/rc' : 'https://api.restcountries.com/countries/v5';
 
-// Fields query keeps payloads small and stable.
-const FIELDS =
-  'name,cca2,cca3,capital,population,area,region,subregion,languages,currencies,latlng,borders,flags,maps';
+const API_KEY = import.meta.env.VITE_RESTCOUNTRIES_API_KEY as string | undefined;
 
-// --- Normalization: REST Countries wire shape -> our Country ----------------------------
+// --- Normalization: REST Countries v5 wire shape -> our Country ----------------------------
 
 export interface RawCountry {
-  name?: {
+  names?: {
     common?: string;
     official?: string;
-    nativeName?: Record<string, { official?: string; common?: string }>;
+    native?: Record<string, { official?: string; common?: string }>;
   };
-  cca2?: string;
-  cca3?: string;
-  capital?: string[];
-  population?: number;
-  area?: number;
+  codes?: {
+    alpha_2?: string;
+    alpha_3?: string;
+  };
+  capitals?: Array<{ name?: string }>;
+  flag?: { url_png?: string; description?: string };
   region?: string;
   subregion?: string;
-  languages?: Record<string, string>;
-  currencies?: Record<string, { name?: string; symbol?: string }>;
-  latlng?: number[];
+  area?: { kilometers?: number };
   borders?: string[];
-  flags?: { png?: string; svg?: string; alt?: string };
-  maps?: { googleMaps?: string };
+  coordinates?: { lat?: number; lng?: number };
+  currencies?: Array<{ code?: string; name?: string; symbol?: string }>;
+  languages?: Array<{ name?: string }>;
+  links?: { google_maps?: string };
+  population?: number;
 }
 
 export function normalizeCountry(raw: RawCountry): Country {
-  const nativeNames: NativeName[] = Object.entries(raw.name?.nativeName ?? {}).map(
+  const nativeNames: NativeName[] = Object.entries(raw.names?.native ?? {}).map(
     ([lang, v]) => ({
       lang,
       official: v.official ?? '',
@@ -50,46 +46,46 @@ export function normalizeCountry(raw: RawCountry): Country {
     }),
   );
 
-  const currencies: Currency[] = Object.entries(raw.currencies ?? {}).map(([code, v]) => ({
-    code,
-    name: v.name ?? '',
-    symbol: v.symbol ?? '',
+  const currencies: Currency[] = (raw.currencies ?? []).map((c) => ({
+    code: c.code ?? '',
+    name: c.name ?? '',
+    symbol: c.symbol ?? '',
   }));
 
   const latlng =
-    Array.isArray(raw.latlng) && raw.latlng.length === 2
-      ? ([raw.latlng[0], raw.latlng[1]] as [number, number])
+    raw.coordinates != null
+      ? ([raw.coordinates.lat ?? 0, raw.coordinates.lng ?? 0] as [number, number])
       : null;
 
   return {
-    cca2: (raw.cca2 ?? '').toUpperCase(),
-    cca3: (raw.cca3 ?? '').toUpperCase(),
-    nameCommon: raw.name?.common ?? '',
-    nameOfficial: raw.name?.official ?? '',
+    cca2: (raw.codes?.alpha_2 ?? '').toUpperCase(),
+    cca3: (raw.codes?.alpha_3 ?? '').toUpperCase(),
+    nameCommon: raw.names?.common ?? '',
+    nameOfficial: raw.names?.official ?? '',
     nativeNames,
-    capital: raw.capital ?? [],
+    capital: (raw.capitals ?? []).map((c) => c.name ?? '').filter(Boolean),
     population: raw.population ?? 0,
-    area: raw.area ?? 0,
+    area: raw.area?.kilometers ?? 0,
     region: raw.region ?? '',
     subregion: raw.subregion ?? '',
-    languages: Object.values(raw.languages ?? {}),
+    languages: (raw.languages ?? []).map((l) => l.name ?? '').filter(Boolean),
     currencies,
-    flagPng: raw.flags?.png ?? raw.flags?.svg ?? '',
-    flagAlt: raw.flags?.alt ?? '',
+    flagPng: raw.flag?.url_png ?? '',
+    flagAlt: raw.flag?.description ?? '',
     latlng,
     borders: (raw.borders ?? []).map((b) => b.toUpperCase()),
-    mapsUrl: raw.maps?.googleMaps ?? '',
+    mapsUrl: raw.links?.google_maps ?? '',
   };
 }
 
 // --- API surface (dependency-injected; tests pass a fixture-backed fake) -----------------
 
 export interface CountryApi {
-  /** Exact alpha-2/alpha-3 lookup (`/alpha/{code}`). Empty when unknown. */
+  /** Exact alpha-2/alpha-3 lookup — filters search results client-side. Empty when unknown. */
   byAlpha(code: string): Promise<Country[]>;
-  /** Name search (`/name/{name}`) — substring match over common/official/native names. */
+  /** Name search (`?q={name}`) — substring match over common/official/native names. */
   byName(name: string): Promise<Country[]>;
-  /** Batch alpha-3 lookup (`/alpha?codes=…`), used to turn border codes into names. */
+  /** Batch alpha code lookup, used to turn border codes into names. */
   byCodes(codes: string[]): Promise<Country[]>;
 }
 
@@ -153,17 +149,15 @@ export async function fetchBorderNames(country: Country, api: CountryApi): Promi
 
 // --- Live API implementation ------------------------------------------------------------
 
-const API_KEY = import.meta.env.VITE_RESTCOUNTRIES_API_KEY as string | undefined;
-
+// v5 wraps results in { data: { objects: [...] } }. No-match returns 200 + empty objects[].
 async function fetchArray(url: string): Promise<Country[]> {
   const headers: HeadersInit = API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {};
   const res = await fetch(url, { headers });
-  if (res.status === 404) return []; // "no such country" — a normal, non-error outcome
   if (!res.ok) {
     throw new Error(`REST Countries request failed: ${res.status} ${res.statusText}`);
   }
   const data = await res.json();
-  return (Array.isArray(data) ? (data as RawCountry[]) : []).map(normalizeCountry);
+  return ((data?.data?.objects ?? []) as RawCountry[]).map(normalizeCountry);
 }
 
 export function createCountryApi(base: string = API_BASE): CountryApi {
@@ -172,12 +166,21 @@ export function createCountryApi(base: string = API_BASE): CountryApi {
     if (!cache.has(url)) cache.set(url, fetchArray(url).catch((e) => (cache.delete(url), Promise.reject(e))));
     return cache.get(url)!;
   };
+
+  // v5 has no dedicated code endpoint — search and filter for an exact alpha_2/alpha_3 match.
+  const byAlphaImpl = async (code: string): Promise<Country[]> => {
+    const results = await get(`${base}?q=${encodeURIComponent(code)}&limit=100`);
+    const cu = code.toUpperCase();
+    return results.filter((c) => c.cca2 === cu || c.cca3 === cu);
+  };
+
   return {
-    byAlpha: (code) => get(`${base}/alpha/${encodeURIComponent(code)}?fields=${FIELDS}`),
-    byName: (name) => get(`${base}/name/${encodeURIComponent(name)}?fields=${FIELDS}`),
-    byCodes: (codes) =>
-      codes.length === 0
-        ? Promise.resolve([])
-        : get(`${base}/alpha?codes=${codes.map((c) => c.toLowerCase()).join(',')}&fields=${FIELDS}`),
+    byAlpha: byAlphaImpl,
+    byName: (name) => get(`${base}?q=${encodeURIComponent(name)}&limit=100`),
+    byCodes: async (codes) => {
+      if (codes.length === 0) return [];
+      const lists = await Promise.all(codes.map(byAlphaImpl));
+      return lists.flat();
+    },
   };
 }

@@ -117,9 +117,8 @@ describe('border-name resolution', () => {
 describe('normalization tolerates missing fields (SPEC §7)', () => {
   it('omits fields absent from the API response instead of inventing them', () => {
     const bouvet = normalizeCountry({
-      name: { common: 'Bouvet Island', official: 'Bouvet Island' },
-      cca2: 'BV',
-      cca3: 'BVT',
+      names: { common: 'Bouvet Island', official: 'Bouvet Island' },
+      codes: { alpha_2: 'BV', alpha_3: 'BVT' },
     });
     expect(bouvet.capital).toEqual([]);
     expect(bouvet.languages).toEqual([]);

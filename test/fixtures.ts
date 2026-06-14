@@ -4,7 +4,7 @@ import { normalizeCountry, type RawCountry } from '../src/data/countries';
 import type { Country } from '../src/data/types';
 
 export function loadFixtureCountries(): Country[] {
-  return (raw as RawCountry[]).map(normalizeCountry);
+  return (raw as unknown as RawCountry[]).map(normalizeCountry);
 }
 
 export function byCca2(countries: Country[], cca2: string): Country {
