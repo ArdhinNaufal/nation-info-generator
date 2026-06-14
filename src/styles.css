@@ -234,3 +234,88 @@ button:disabled {
 .spacer {
   height: 10px;
 }
+
+/* --- Poster Mode --- */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tab {
+  padding: 8px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+.tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0b1020;
+  font-weight: 600;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+.modal {
+  max-width: 440px;
+  width: 100%;
+  margin: 0;
+}
+.modal h2 {
+  margin: 0;
+}
+
+.banner-warn {
+  border-color: var(--danger);
+  background: rgba(255, 107, 107, 0.08);
+}
+.banner-warn p {
+  margin: 0;
+  font-size: 13px;
+}
+.linklike {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.poster-skeleton {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+.poster-skeleton .sk {
+  background: linear-gradient(90deg, var(--panel-2), var(--border), var(--panel-2));
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.3s ease-in-out infinite;
+  border-radius: 6px;
+}
+.poster-skeleton .sk-upper {
+  flex: 0 0 52%;
+}
+.poster-skeleton .sk-card {
+  flex: 1;
+}
+@keyframes sk-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

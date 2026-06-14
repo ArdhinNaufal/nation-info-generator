@@ -43,6 +43,23 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-14 — Built **Poster Mode** (`specs/poster-mode.md`): a second tab generating a
+  magazine-style portrait poster (landmark-photo background, flag + World-Bank GDP stats, map
+  snapshot, Claude-written facts). Render is a pure `renderPoster(ctx, PosterInput, size)` in
+  `render/poster.ts` whose `PosterTarget` *extends* the wallpaper `RenderTarget` (adds
+  `translate`/`rotate`/`createLinearGradient` for vertical landmark text + the no-photo
+  gradient) — same recording-fake test seam. Services (`services/{worldbank,claudePoster,
+  unsplashService,geoapifyService}`) are thin `fetch` wrappers; only the keyless World Bank one
+  and the pure `geoapify` URL builder are deterministic. Keys (`state/keyStore`) + per-country
+  cache (`state/posterCache`) are DI'd `StorageLike` like `state/storage`, so they're tested
+  offline. Claude is called **directly from the browser** with the user's key (model
+  `claude-sonnet-4-6`, the spec's choice) — requires the
+  `anthropic-dangerous-direct-browser-access: true` header or the request is CORS-blocked.
+  Degradation is per-section (§8): a missing key skips that call (never sent empty) and shows an
+  inline "add it in Settings" banner; API failures fall back (field-based facts / solid bg /
+  "Map unavailable"). Async generation is guarded by a monotonic run-id so rapid country
+  switches can't render one country's data under another. Wallpaper mode is untouched. 50 tests.
+
 - 2026-06-14 — Dropped the `/v3.1/all` fetch after it failed with a CORS error in the browser
   (its throttled/error responses carry no `Access-Control-Allow-Origin`). Switched to per-query
   endpoints (`/alpha`, `/name`, `/alpha?codes=`) behind a DI'd `CountryApi`; resolution is now

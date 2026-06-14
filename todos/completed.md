@@ -2,6 +2,20 @@
 
 > Doubles as an audit trail of AI-assisted work. Record the item and how it was verified.
 
+- [x] 2026-06-14 — Built Poster Mode (`specs/poster-mode.md`): new "Poster" tab generating a
+      magazine-style portrait poster — landmark-photo background, flag + World Bank GDP stats,
+      Geoapify map, Claude-written facts. New: pure `render/poster.ts` (`PosterTarget extends`
+      the wallpaper `RenderTarget`), `services/{worldbank,claudePoster,unsplashService,
+      geoapifyService}`, DI'd `state/{keyStore,posterCache}`, `components/{PosterMode,
+      KeySettings,PosterPreview}`, `render/export.ts#loadImage`, App tab switch. Per-section
+      graceful degradation (§8); missing keys skip the call + show an inline Settings prompt
+      (§5); per-country cache (§6); regenerate; run-id guard against rapid-switch races
+      (fresh-context review found that one pre-merge). Claude called browser-direct with the
+      user's key (`claude-sonnet-4-6` + `anthropic-dangerous-direct-browser-access`). Verified:
+      `bash .claude/skills/verify/scripts/check.sh` → RESULT: PASS (`tsc --noEmit` clean + 50
+      vitest cases offline: poster render §12.9 + key/cache state) and `npm run build` succeeds.
+      Wallpaper mode unchanged. Manual browser E2E (spec §12) remains — see active.md.
+
 - [x] 2026-06-14 — Specified Poster Mode (`specs/poster-mode.md`) via spec-interview: a
       photo-backed magazine poster as a separate tab. Decided data sources (World Bank GDP,
       Claude `claude-sonnet-4-6` for landmark+facts, Unsplash photo, Geoapify map),

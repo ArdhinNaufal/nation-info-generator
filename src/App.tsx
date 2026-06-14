@@ -14,9 +14,13 @@ import CountryInput from './components/CountryInput';
 import Controls from './components/Controls';
 import CanvasPreview from './components/CanvasPreview';
 import SavedDesigns from './components/SavedDesigns';
+import PosterMode from './components/PosterMode';
+
+type Mode = 'wallpaper' | 'poster';
 
 export default function App() {
   const api = useMemo(() => createCountryApi(), []);
+  const [mode, setMode] = useState<Mode>('wallpaper');
   const [country, setCountry] = useState<Country | null>(null);
   const [borderNames, setBorderNames] = useState<string[]>([]);
   const [customization, setCustomization] = useState<Customization>(defaultCustomization());
@@ -92,8 +96,27 @@ export default function App() {
           </a>
           .
         </p>
+        <div className="tabs">
+          <button
+            type="button"
+            className={mode === 'wallpaper' ? 'tab active' : 'tab'}
+            onClick={() => setMode('wallpaper')}
+          >
+            Wallpaper
+          </button>
+          <button
+            type="button"
+            className={mode === 'poster' ? 'tab active' : 'tab'}
+            onClick={() => setMode('poster')}
+          >
+            Poster
+          </button>
+        </div>
       </header>
 
+      {mode === 'poster' && <PosterMode api={api} />}
+
+      {mode === 'wallpaper' && (
       <div className="layout">
         <div>
           <CountryInput api={api} onResolved={selectCountry} />
@@ -139,6 +162,7 @@ export default function App() {
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

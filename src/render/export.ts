@@ -50,3 +50,20 @@ export function loadFlagImage(url: string): Promise<HTMLImageElement | undefined
 export function sanitizeFilename(name: string): string {
   return name.replace(/[^a-z0-9-_]+/gi, '_').replace(/^_+|_+$/g, '') || 'wallpaper';
 }
+
+/**
+ * Load an arbitrary remote image for canvas drawing (Unsplash photo, Geoapify map). Resolves
+ * to `undefined` (rather than rejecting) on failure so a blocked/404 image degrades gracefully
+ * (specs/poster-mode.md §8). `crossOrigin='anonymous'` keeps the canvas untainted for `toBlob`;
+ * Unsplash (images.unsplash.com) and Geoapify both send CORS headers.
+ */
+export function loadImage(url: string): Promise<HTMLImageElement | undefined> {
+  return new Promise((resolve) => {
+    if (!url) return resolve(undefined);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(undefined);
+    img.src = url;
+  });
+}
