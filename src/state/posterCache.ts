@@ -16,6 +16,7 @@ export interface PosterCache {
   geoapifyUrl: string; // full static map URL ('' when unavailable)
   gdp: number | null;
   gdpPerCapitaPpp: number | null;
+  mapZoom?: number; // user-chosen Geoapify zoom captured at Generate
   generatedAt: number; // Date.now()
 }
 

@@ -216,12 +216,12 @@ Mobile 1080×1920, Square 1080×1080, Tablet 1536×2048, Custom). The layout ada
 proportionally. Portrait presets (Mobile, Tablet) best match the reference image.
 
 The map is requested at the **exact pixel size of its render slot** (`render/poster#mapSlotSize`)
-and the renderer **cover-fills** that slot. To frame the country we **geocode its bounding box**
-via Geoapify (`fetchCountryBbox`, reusing the map key) and compute the zoom that fits the whole
-box into the container (`zoomForBbox`, Web-Mercator, +10% margin), centered on the box
-(`buildMapUrlFromBbox`). Because the zoom is derived from the actual container, the territory fits
-and fills edge-to-edge. If the geocode fails we fall back to the centroid + area heuristic
-(`zoomForArea`). REST Countries gives no bbox, which is why the area-only path can't fit exactly.
+and the renderer **cover-fills** that slot. The **zoom is a manual setting** — a "Map zoom"
+slider (1–12) whose value is captured when the user clicks Generate (`buildMapUrlAt`). The map is
+**centered** on the country's geocoded bounding box (`fetchCountryBbox` → `bboxCenter`, reusing
+the map key; better centering than the centroid for elongated nations), falling back to the REST
+Countries centroid if the geocode fails. The chosen zoom is stored in the cache (`mapZoom`) and
+restored on a cache hit.
 
 **Text size:** two sliders (0.70–1.60×) scale the upper-section text and the fact-card text
 independently (defaults: upper 0.75×, facts 0.70×). They re-render live without re-fetching

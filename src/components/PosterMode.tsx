@@ -17,7 +17,7 @@ import {
 import { mapSlotSize } from '../render/poster';
 import { fetchGdp } from '../services/worldbank';
 import { fetchPhoto } from '../services/unsplashService';
-import { buildMapUrl, buildMapUrlFromBbox, fetchCountryBbox } from '../services/geoapifyService';
+import { bboxCenter, buildMapUrlAt, fetchCountryBbox } from '../services/geoapifyService';
 import CountryInput from './CountryInput';
 import KeySettings from './KeySettings';
 import PosterPreview, { type PosterImages } from './PosterPreview';
@@ -55,6 +55,8 @@ function fieldFacts(c: Country): string[] {
   return f.slice(0, 7);
 }
 
+const DEFAULT_MAP_ZOOM = 4; // Geoapify zoom; user adjusts per country
+
 const parseFacts = (text: string): string[] =>
   text
     .split('\n')
@@ -73,6 +75,7 @@ export default function PosterMode({ api }: Props) {
   const [customSize, setCustomSize] = useState({ width: 1080, height: 1920 });
   const [upperScale, setUpperScale] = useState(0.75); // upper-section text size
   const [factsScale, setFactsScale] = useState(0.7); // fact-card text size
+  const [mapZoom, setMapZoom] = useState(DEFAULT_MAP_ZOOM); // captured into the map on Generate
 
   // Monotonic run id: a newer country/regenerate invalidates any in-flight generation so a
   // slow pipeline can't render one country's data under another (guards rapid switching).
@@ -104,6 +107,7 @@ export default function PosterMode({ api }: Props) {
         unsplashQuery: cached.unsplashQuery,
         factsText: cached.facts.join('\n'),
       });
+      setMapZoom(cached.mapZoom ?? DEFAULT_MAP_ZOOM);
       setRecord(cached);
     } else {
       setForm({
@@ -153,15 +157,13 @@ export default function PosterMode({ api }: Props) {
     ]);
     if (stale()) return; // a newer country/regenerate superseded this run
 
-    // Geoapify map: prefer the geocoded bbox (exact fit); fall back to centroid+zoom if it's
-    // missing. PosterPreview decodes the URL (renderer shows "Map unavailable" if it fails).
+    // Geoapify map: centered on the geocoded bbox (falling back to the REST Countries centroid)
+    // at the user's captured zoom. Requested at the slot size so cover-fill leaves no gaps.
     let geoapifyUrl = '';
     if (k.geoapify && c.latlng) {
-      // Request the map at the exact slot size so its aspect matches and nothing is cropped.
       const slot = mapSlotSize(size);
-      geoapifyUrl = bbox
-        ? buildMapUrlFromBbox(bbox, slot.width, slot.height, k.geoapify)
-        : buildMapUrl(c.latlng[0], c.latlng[1], c.area, slot.width, slot.height, k.geoapify);
+      const center = bbox ? bboxCenter(bbox) : { lat: c.latlng[0], lng: c.latlng[1] };
+      geoapifyUrl = buildMapUrlAt(center.lat, center.lng, mapZoom, slot.width, slot.height, k.geoapify);
     }
 
     const next: PosterCache = {
@@ -176,6 +178,7 @@ export default function PosterMode({ api }: Props) {
       geoapifyUrl,
       gdp: gdpRes.gdp,
       gdpPerCapitaPpp: gdpRes.gdpPpp,
+      mapZoom,
       generatedAt: Date.now(),
     };
     clearPosterCache(c.cca2);
@@ -334,6 +337,25 @@ export default function PosterMode({ api }: Props) {
           )}
           {!sizeResult.ok && <p className="error">{sizeResult.error}</p>}
         </div>
+
+        {country && (
+          <div className="panel">
+            <h2>Map</h2>
+            <label htmlFor="poster-map-zoom">Zoom level — {mapZoom}</label>
+            <input
+              id="poster-map-zoom"
+              type="range"
+              min={1}
+              max={12}
+              step={1}
+              value={mapZoom}
+              onChange={(e) => setMapZoom(Number(e.target.value))}
+            />
+            <p className="notice">
+              Higher = closer in. Captured into the map when you click <strong>Generate poster</strong>.
+            </p>
+          </div>
+        )}
 
         {country && (
           <div className="panel">

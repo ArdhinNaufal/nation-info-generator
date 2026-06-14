@@ -32,6 +32,10 @@
 
 ## Geoapify static maps can't "fit a country" without a bounding box
 - **Date:** 2026-06-14
+- **Update:** auto-fit was ultimately **replaced by a manual "Map zoom" slider** (captured at
+  Generate, `buildMapUrlAt`). The bbox is still fetched, but now only to *center* the map
+  (`bboxCenter`, Mercator latitude midpoint). The auto-fit functions below
+  (`zoomForBbox`/`area=rect:`) were removed — kept here for the reasoning.
 - **Symptom:** a center+zoom map cut off elongated countries (Norway) — the territory ran past
   the frame top/bottom or sides.
 - **Cause(s):** two compounding ones. (a) The map was *requested* at one aspect (0.4W×0.3H) but

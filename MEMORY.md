@@ -43,6 +43,15 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-14 — **Poster Mode — manual map zoom.** Replaced the auto-fit map zoom with a
+  user-controlled **"Map zoom" slider (1–12)** whose value is captured at Generate and baked into
+  the Geoapify URL (`buildMapUrlAt`). The map is still **centered** on the geocoded bbox
+  (`fetchCountryBbox` → `bboxCenter`) — falling back to the REST Countries centroid — but the zoom
+  is no longer computed. `mapZoom` is persisted in `PosterCache` (optional) and restored on a
+  cache hit; it persists across countries on a miss (like the text-size sliders). Removed the now
+  obsolete `zoomForArea`/`buildMapUrl`/`zoomForBbox`/`buildMapUrlFromBbox` and their tests; added
+  `bboxCenter`/`buildMapUrlAt` tests. 61 tests.
+
 - 2026-06-14 — **Poster Mode tuning pass (5) — container-fitted map zoom.** Once the map
   cover-fills its slot, Geoapify's `area=rect:` fit was cropping the long axis, so the bbox URL
   builder switched to **center + a zoom computed from the bbox and the container** (`zoomForBbox`,
