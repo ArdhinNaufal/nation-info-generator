@@ -70,7 +70,10 @@ export function normalizeCountry(raw: RawCountry): Country {
     subregion: raw.subregion ?? '',
     languages: (raw.languages ?? []).map((l) => l.name ?? '').filter(Boolean),
     currencies,
-    flagPng: raw.flag?.url_png ?? '',
+    // flagcdn.com allows CORS; flags.restcountries.com (the v5 API's own CDN) does not.
+    flagPng: raw.codes?.alpha_2
+      ? `https://flagcdn.com/w640/${raw.codes.alpha_2.toLowerCase()}.png`
+      : (raw.flag?.url_png ?? ''),
     flagAlt: raw.flag?.description ?? '',
     latlng,
     borders: (raw.borders ?? []).map((b) => b.toUpperCase()),
