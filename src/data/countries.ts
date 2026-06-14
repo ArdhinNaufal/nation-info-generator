@@ -12,7 +12,7 @@ import type { Country, Currency, NativeName } from './types';
 
 // In dev we route through the Vite proxy (see vite.config.ts) to dodge CORS while developing
 // on localhost; in production we call the CORS-enabled endpoints directly.
-const API_BASE = import.meta.env.DEV ? '/rc' : 'https://restcountries.com/v3.1';
+const API_BASE = import.meta.env.DEV ? '/rc' : 'https://api.restcountries.com/v3.1';
 
 // Fields query keeps payloads small and stable.
 const FIELDS =

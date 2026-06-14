@@ -10,7 +10,7 @@ export default defineConfig({
     // while developing. Production calls the CORS-enabled endpoints directly (see API_BASE).
     proxy: {
       '/rc': {
-        target: 'https://restcountries.com/v3.1',
+        target: 'https://api.restcountries.com/v3.1',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/rc/, ''),
       },
