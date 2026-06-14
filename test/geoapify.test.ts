@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   zoomForArea,
+  zoomForBbox,
   buildMapUrl,
   buildMapUrlFromBbox,
   type BBox,
@@ -42,25 +43,41 @@ describe('geoapify buildMapUrl', () => {
   });
 });
 
-describe('geoapify buildMapUrlFromBbox (exact-fit)', () => {
+describe('geoapify zoomForBbox (fit the container)', () => {
   const norway: BBox = { lon1: 4.5, lat1: 57.9, lon2: 31.1, lat2: 71.2 };
 
-  it('fits the country to a padded bounding rectangle', () => {
-    const url = buildMapUrlFromBbox(norway, 452, 380, 'KEY123', 0); // no padding for exact math
-    expect(url).toContain('area=rect%3A4.5%2C57.9%2C31.1%2C71.2');
-    expect(url).toContain('width=452');
-    expect(url).toContain('height=380');
-    expect(url).toContain('apiKey=KEY123');
-    expect(url).not.toContain('zoom='); // bbox fit, not centroid+zoom
+  it('picks a zoom that fits an elongated country into a landscape-ish slot', () => {
+    const z = zoomForBbox(norway, 452, 275);
+    expect(z).toBeGreaterThanOrEqual(2);
+    expect(z).toBeLessThanOrEqual(4);
   });
 
-  it('pads the box outward so the country is not flush against the frame', () => {
-    const url = buildMapUrlFromBbox(norway, 452, 380, 'KEY123', 0.1);
-    // 10% of the 26.6° lon span / 13.3° lat span expands the rect on every side.
-    const rect = decodeURIComponent(url).match(/area=rect:([^&]+)/)![1].split(',').map(Number);
-    expect(rect[0]).toBeLessThan(norway.lon1); // west edge moved out
-    expect(rect[1]).toBeLessThan(norway.lat1); // south edge moved out
-    expect(rect[2]).toBeGreaterThan(norway.lon2); // east edge moved out
-    expect(rect[3]).toBeGreaterThan(norway.lat2); // north edge moved out
+  it('zooms in further for a smaller box in the same container', () => {
+    const small: BBox = { lon1: 10, lat1: 47, lon2: 12, lat2: 48 }; // ~1/13th the span
+    expect(zoomForBbox(small, 452, 275)).toBeGreaterThan(zoomForBbox(norway, 452, 275));
+  });
+
+  it('zooms out for a smaller container (fewer pixels to fit the same box)', () => {
+    expect(zoomForBbox(norway, 226, 138)).toBeLessThanOrEqual(zoomForBbox(norway, 452, 275));
+  });
+
+  it('is constrained by the tighter (Mercator latitude) axis here, not longitude', () => {
+    // The latitude fit is the binding one for tall Norway, so a taller container raises the zoom.
+    expect(zoomForBbox(norway, 452, 550)).toBeGreaterThanOrEqual(zoomForBbox(norway, 452, 275));
+  });
+});
+
+describe('geoapify buildMapUrlFromBbox (center+zoom fitted to the container)', () => {
+  const norway: BBox = { lon1: 4.5, lat1: 57.9, lon2: 31.1, lat2: 71.2 };
+
+  it('centers on the bbox and uses the container-fitted zoom (no area=rect)', () => {
+    const url = buildMapUrlFromBbox(norway, 452, 275, 'KEY123');
+    expect(url).toContain('width=452');
+    expect(url).toContain('height=275');
+    expect(url).toContain('apiKey=KEY123');
+    expect(url).toContain(`zoom=${zoomForBbox(norway, 452, 275)}`);
+    expect(url).not.toContain('area=rect');
+    // Center longitude is the midpoint of the bbox: (4.5 + 31.1) / 2 = 17.8.
+    expect(decodeURIComponent(url)).toContain('center=lonlat:17.8,');
   });
 });

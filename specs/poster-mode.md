@@ -24,7 +24,7 @@ Users: anyone who wants a rich, visually-striking country poster, not just a fac
 
 The canvas is divided into two vertical zones.
 
-### 2a. Upper section (~40% of canvas height)
+### 2a. Upper section (~43% of canvas height)
 
 Two sub-columns inside a dark-translucent panel (a gap separates the far-left vertical-text
 strip from the content column so the rotated text doesn't crowd the flag/stats):
@@ -54,7 +54,7 @@ strip from the content column so the rotated text doesn't crowd the flag/stats):
     column's `Ccy` value) **wraps onto further lines** rather than clipping — both are
     the last item in their column, so there is room.
 
-### 2b. Lower section (~60% of canvas height)
+### 2b. Lower section (~57% of canvas height)
 
 Vertically stacked **prose fact cards**. Each card:
 - Slight black-translucent background (same style as upper panel but per-card)
@@ -216,14 +216,15 @@ Mobile 1080×1920, Square 1080×1080, Tablet 1536×2048, Custom). The layout ada
 proportionally. Portrait presets (Mobile, Tablet) best match the reference image.
 
 The map is requested at the **exact pixel size of its render slot** (`render/poster#mapSlotSize`)
-so its aspect matches and the renderer draws it *contained* (never cropped). For the framing we
-**geocode the country's bounding box** via Geoapify (`fetchCountryBbox`, reusing the map key) and
-request the static map with `area=rect:` (`buildMapUrlFromBbox`, +6% padding) for an exact fit —
-REST Countries gives no bbox. If the geocode fails we fall back to the centroid+zoom heuristic
-(`zoomForArea`, biased wide so elongated nations still mostly fit).
+and the renderer **cover-fills** that slot. To frame the country we **geocode its bounding box**
+via Geoapify (`fetchCountryBbox`, reusing the map key) and compute the zoom that fits the whole
+box into the container (`zoomForBbox`, Web-Mercator, +10% margin), centered on the box
+(`buildMapUrlFromBbox`). Because the zoom is derived from the actual container, the territory fits
+and fills edge-to-edge. If the geocode fails we fall back to the centroid + area heuristic
+(`zoomForArea`). REST Countries gives no bbox, which is why the area-only path can't fit exactly.
 
 **Text size:** two sliders (0.70–1.60×) scale the upper-section text and the fact-card text
-independently (defaults: upper 0.70×, facts 0.70×). They re-render live without re-fetching
+independently (defaults: upper 0.75×, facts 0.70×). They re-render live without re-fetching
 images.
 
 **Preview zoom:** the result card has a view-only zoom (0.5–4×, −/%/+); the canvas scales inside

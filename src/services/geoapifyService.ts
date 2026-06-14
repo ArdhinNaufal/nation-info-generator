@@ -16,9 +16,9 @@ export interface BBox {
 /**
  * Look up a country's bounding box via Geoapify geocoding (reuses the same key as the static
  * map). Returns null on any failure so the caller can fall back to the centroid+zoom heuristic.
- * A real bbox lets the static map fit the whole territory exactly (`area=rect:` in
- * buildMapUrlFromBbox) — REST Countries gives no bbox, which is why the centroid heuristic clips
- * elongated nations.
+ * A real bbox lets us compute the zoom that fits the whole territory into the map container
+ * (`zoomForBbox` in buildMapUrlFromBbox) — REST Countries gives no bbox, which is why the
+ * area-only heuristic clips elongated nations.
  */
 export async function fetchCountryBbox(query: string, apiKey: string): Promise<BBox | null> {
   const url = `${GEOCODE}?text=${encodeURIComponent(query)}&type=country&format=json&limit=1&apiKey=${encodeURIComponent(
@@ -40,29 +40,52 @@ export async function fetchCountryBbox(query: string, apiKey: string): Promise<B
   return { lon1: b.lon1, lat1: b.lat1, lon2: b.lon2, lat2: b.lat2 };
 }
 
+const TILE = 256; // Web Mercator tile size in px
+const clampLat = (lat: number): number => Math.max(-85, Math.min(85, lat));
+// Web Mercator y in [0,1] (0 = north edge, 1 = south edge).
+const mercY = (lat: number): number => {
+  const r = (clampLat(lat) * Math.PI) / 180;
+  return 0.5 - Math.log(Math.tan(Math.PI / 4 + r / 2)) / (2 * Math.PI);
+};
+
 /**
- * Static map fitted to a bounding box (`area=rect:`), padded slightly so the country's edges
- * aren't flush against the frame. Geoapify expands the rect to the image aspect, so the whole
- * territory is always visible. Pure — unit-testable without a network call.
+ * The integer zoom at which a bounding box fits inside a `mapWidth × mapHeight` container — the
+ * smaller of the longitude-fit and (Mercator) latitude-fit zooms, so the whole box is visible
+ * with `pad` (fractional) margin. This is what makes the map fit a country once it cover-fills
+ * its slot: the zoom is derived from the actual container, not a coarse area table.
+ */
+export function zoomForBbox(bbox: BBox, mapWidth: number, mapHeight: number, pad = 0.1): number {
+  const f = 1 + pad;
+  const lonFrac = (Math.max(0.0001, Math.abs(bbox.lon2 - bbox.lon1)) / 360) * f;
+  const latFrac = Math.max(0.0001, Math.abs(mercY(bbox.lat2) - mercY(bbox.lat1))) * f;
+  const zoomLon = Math.log2(mapWidth / (TILE * lonFrac));
+  const zoomLat = Math.log2(mapHeight / (TILE * latFrac));
+  const z = Math.floor(Math.min(zoomLon, zoomLat));
+  return Math.max(1, Math.min(18, z));
+}
+
+/**
+ * Static map centered on a bounding box, zoomed (via `zoomForBbox`) so the whole territory fits
+ * the `mapWidth × mapHeight` container. The image is the container size, so the renderer's
+ * cover-fill fills the slot edge-to-edge without cropping the country. Pure — unit-testable.
  */
 export function buildMapUrlFromBbox(
   bbox: BBox,
   mapWidth: number,
   mapHeight: number,
   apiKey: string,
-  pad = 0.06,
+  pad = 0.1,
 ): string {
-  const dLon = (bbox.lon2 - bbox.lon1) * pad;
-  const dLat = (bbox.lat2 - bbox.lat1) * pad;
-  const lon1 = bbox.lon1 - dLon;
-  const lat1 = bbox.lat1 - dLat;
-  const lon2 = bbox.lon2 + dLon;
-  const lat2 = bbox.lat2 + dLat;
+  const lonCenter = (bbox.lon1 + bbox.lon2) / 2;
+  // Latitude center taken at the Mercator midpoint (more accurate than a plain average).
+  const midY = (mercY(bbox.lat1) + mercY(bbox.lat2)) / 2;
+  const latCenter = (Math.atan(Math.sinh((0.5 - midY) * 2 * Math.PI)) * 180) / Math.PI;
   const params = new URLSearchParams({
     style: 'osm-carto',
     width: String(Math.round(mapWidth)),
     height: String(Math.round(mapHeight)),
-    area: `rect:${lon1},${lat1},${lon2},${lat2}`,
+    center: `lonlat:${lonCenter},${latCenter}`,
+    zoom: String(zoomForBbox(bbox, mapWidth, mapHeight, pad)),
     apiKey,
   });
   return `${BASE}?${params.toString()}`;

@@ -38,14 +38,16 @@
   *drawn* into a differently-shaped slot, and `drawCover` crops the overflow. (b) A fixed
   area→zoom table ignores the map's pixel width, so the same area can over- or under-fill.
 - **Fix (final):** REST Countries (v5) exposes only `latlng` (centroid) + `area`, no bbox, so
-  centroid+zoom can't fit a country reliably. We now **geocode the bbox from Geoapify**
-  (`fetchCountryBbox`, same key as the static map) and request `area=rect:lon1,lat1,lon2,lat2`
-  (`buildMapUrlFromBbox`, +6% pad) — Geoapify expands the rect to the image aspect, so the whole
-  territory shows. Supporting pieces still matter: one geometry source (`upperGeometry` →
-  `mapSlotSize`) so the request aspect matches the slot, and drawing the map **contained**
-  (centered, never cropped). The old centroid+zoom (`zoomForArea`, biased wide) is the fallback
-  when the geocode fails. **Caveat:** a country's geocoded bbox may include remote territory
-  (overseas regions, far islands) and shrink the mainland — acceptable, but watch for it.
+  centroid+zoom can't fit a country reliably. We **geocode the bbox from Geoapify**
+  (`fetchCountryBbox`, same key as the static map). First attempt used `area=rect:` — but once the
+  map **cover-fills** its slot, Geoapify's rect fit crops the long axis. So the final approach
+  computes the zoom ourselves from the bbox **and the container pixels** (`zoomForBbox`,
+  Web-Mercator: the smaller of the longitude-fit and Mercator-latitude-fit zooms, +10% margin)
+  and centers on the box (`buildMapUrlFromBbox` → center+zoom). Deriving zoom from the actual
+  container is what makes the territory both fit and fill. Latitude must use the **Mercator**
+  projection, not raw degrees, or tall high-latitude countries (Norway) come out wrong. The old
+  `zoomForArea` centroid path is the fallback when the geocode fails. **Caveat:** a geocoded bbox
+  may include remote territory (overseas regions, far islands) and shrink the mainland.
 
 ## Decode images and draw in *separate* effects so render-only tweaks don't refetch
 - **Date:** 2026-06-14

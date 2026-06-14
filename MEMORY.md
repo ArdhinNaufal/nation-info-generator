@@ -43,6 +43,14 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-14 — **Poster Mode tuning pass (5) — container-fitted map zoom.** Once the map
+  cover-fills its slot, Geoapify's `area=rect:` fit was cropping the long axis, so the bbox URL
+  builder switched to **center + a zoom computed from the bbox and the container** (`zoomForBbox`,
+  Web-Mercator, picks the smaller of the lon-fit / lat-fit zooms, +10% margin) centered on the
+  box. The zoom now follows the map image container, so the territory fits *and* fills. Default
+  upper text scale 0.70→0.75 and `UPPER_FRACTION` 0.40→0.43 (taller upper panel for the larger
+  text). 67 tests (added `zoomForBbox`; rewrote the `buildMapUrlFromBbox` cases to center+zoom).
+
 - 2026-06-14 — **Poster Mode tuning pass (4).** Default upper text scale 0.85→0.70 and
   `UPPER_FRACTION` 0.45→0.40 (shorter upper panel → more fact space). Map now **cover-fills** its
   slot (`drawCover`) instead of contain — safe because the `area=rect:` bbox fit frames the whole
