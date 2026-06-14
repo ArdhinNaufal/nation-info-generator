@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Country, Customization, SavedDesign } from './data/types';
-import { fetchAllCountries, resolveCountry } from './data/countries';
+import { createCountryApi, fetchBorderNames } from './data/countries';
 import { defaultCustomization } from './render/theme';
 import { getSizeById, validateCustomSize, type Size } from './render/sizes';
 import {
@@ -15,12 +15,10 @@ import Controls from './components/Controls';
 import CanvasPreview from './components/CanvasPreview';
 import SavedDesigns from './components/SavedDesigns';
 
-type LoadState = 'loading' | 'ready' | 'error';
-
 export default function App() {
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [loadState, setLoadState] = useState<LoadState>('loading');
+  const api = useMemo(() => createCountryApi(), []);
   const [country, setCountry] = useState<Country | null>(null);
+  const [borderNames, setBorderNames] = useState<string[]>([]);
   const [customization, setCustomization] = useState<Customization>(defaultCustomization());
   const [sizeId, setSizeId] = useState('desktop');
   const [customSize, setCustomSize] = useState({ width: 2560, height: 1440 });
@@ -28,18 +26,14 @@ export default function App() {
 
   const storageAvailable = useMemo(() => isStorageAvailable(), []);
 
-  const fetchCountries = () => {
-    setLoadState('loading');
-    fetchAllCountries()
-      .then((list) => {
-        setCountries(list);
-        setLoadState('ready');
-      })
-      .catch(() => setLoadState('error'));
-  };
-
-  useEffect(fetchCountries, []);
   useEffect(() => setDesigns(loadDesigns()), []);
+
+  // When a country is chosen, resolve its border codes to names (best-effort, never blocks).
+  const selectCountry = (c: Country) => {
+    setCountry(c);
+    setBorderNames(c.borders); // show codes immediately
+    void fetchBorderNames(c, api).then((names) => setBorderNames(names));
+  };
 
   // Resolve the active size, validating custom dimensions (SPEC §7).
   const sizeResult = useMemo(() => {
@@ -72,11 +66,17 @@ export default function App() {
   };
 
   const handleOpen = (d: SavedDesign) => {
-    const r = resolveCountry(d.query, countries);
-    if (r.kind === 'ok') setCountry(r.country);
     setCustomization(d.customization);
     setSizeId(d.sizeId);
     if (d.customSize) setCustomSize(d.customSize);
+    void api
+      .byAlpha(d.query)
+      .then((list) => {
+        if (list[0]) selectCountry(list[0]);
+      })
+      .catch(() => {
+        /* leave the previous preview in place if the lookup fails */
+      });
   };
 
   const handleDelete = (id: string) => setDesigns(deleteDesign(id));
@@ -94,63 +94,51 @@ export default function App() {
         </p>
       </header>
 
-      {loadState === 'loading' && <p>Loading country data…</p>}
-      {loadState === 'error' && (
-        <div className="panel">
-          <p className="error">Couldn't load country data (network or API error).</p>
-          <button className="primary" onClick={fetchCountries}>
-            Retry
-          </button>
+      <div className="layout">
+        <div>
+          <CountryInput api={api} onResolved={selectCountry} />
+          <Controls
+            customization={customization}
+            onChange={setCustomization}
+            sizeId={sizeId}
+            customSize={customSize}
+            onSizeIdChange={setSizeId}
+            onCustomSizeChange={setCustomSize}
+            sizeError={sizeError}
+          />
+          <SavedDesigns
+            designs={designs}
+            storageAvailable={storageAvailable}
+            canSave={!!country}
+            onSave={handleSave}
+            onOpen={handleOpen}
+            onDelete={handleDelete}
+          />
         </div>
-      )}
 
-      {loadState === 'ready' && (
-        <div className="layout">
-          <div>
-            <CountryInput countries={countries} onResolved={setCountry} />
-            <Controls
+        <div>
+          {!country && (
+            <div className="panel">
+              <p className="notice">
+                Enter a country to generate a wallpaper. Try “Japan”, “JP”, or “JPN”.
+              </p>
+            </div>
+          )}
+          {country && !activeSize && (
+            <div className="panel">
+              <p className="error">{sizeError}</p>
+            </div>
+          )}
+          {country && activeSize && (
+            <CanvasPreview
+              country={country}
+              borderNames={borderNames}
               customization={customization}
-              onChange={setCustomization}
-              sizeId={sizeId}
-              customSize={customSize}
-              onSizeIdChange={setSizeId}
-              onCustomSizeChange={setCustomSize}
-              sizeError={sizeError}
+              size={activeSize}
             />
-            <SavedDesigns
-              designs={designs}
-              storageAvailable={storageAvailable}
-              canSave={!!country}
-              onSave={handleSave}
-              onOpen={handleOpen}
-              onDelete={handleDelete}
-            />
-          </div>
-
-          <div>
-            {!country && (
-              <div className="panel">
-                <p className="notice">
-                  Enter a country to generate a wallpaper. Try “Japan”, “JP”, or “JPN”.
-                </p>
-              </div>
-            )}
-            {country && !activeSize && (
-              <div className="panel">
-                <p className="error">{sizeError}</p>
-              </div>
-            )}
-            {country && activeSize && (
-              <CanvasPreview
-                country={country}
-                allCountries={countries}
-                customization={customization}
-                size={activeSize}
-              />
-            )}
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

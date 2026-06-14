@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { Country, Customization } from '../data/types';
 import type { Size } from '../render/sizes';
 import { render } from '../render/wallpaper';
-import { resolveBorderNames } from '../data/countries';
 import {
   prepareCanvas,
   canvasToPngBlob,
@@ -13,12 +12,12 @@ import {
 
 interface Props {
   country: Country;
-  allCountries: Country[];
+  borderNames: string[];
   customization: Customization;
   size: Size;
 }
 
-export default function CanvasPreview({ country, allCountries, customization, size }: Props) {
+export default function CanvasPreview({ country, borderNames, customization, size }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const flagCache = useRef<Map<string, HTMLImageElement | undefined>>(new Map());
   const [busy, setBusy] = useState(false);
@@ -51,13 +50,13 @@ export default function CanvasPreview({ country, allCountries, customization, si
         customization,
         size,
         flagImage: flag,
-        borderNames: resolveBorderNames(country, allCountries),
+        borderNames,
       });
     })();
     return () => {
       cancelled = true;
     };
-  }, [country, allCountries, customization, size]);
+  }, [country, borderNames, customization, size]);
 
   const download = async () => {
     const canvas = canvasRef.current;

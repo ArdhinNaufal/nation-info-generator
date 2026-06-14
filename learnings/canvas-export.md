@@ -1,3 +1,15 @@
+# REST Countries: a "CORS error" is usually a hidden non-2xx
+- **Date:** 2026-06-14
+- **Symptom:** browser console shows "blocked by CORS policy: No 'Access-Control-Allow-Origin'
+  header" when fetching `restcountries.com/v3.1/all?fields=…` from localhost.
+- **Cause:** `/all` is heavy and frequently throttled/blocked; its *error* responses don't
+  carry CORS headers, so the browser reports the failure as CORS rather than as the real
+  status. The lightweight `/alpha` and `/name` endpoints are CORS-enabled and reliable.
+- **Rule:** don't use `/all`. Resolve via `/alpha/{code}` and `/name/{name}` (see
+  `data/countries.ts`). For local dev, a Vite `server.proxy` (`/rc` → restcountries) avoids
+  CORS entirely; production calls the endpoints directly. CORS can't be fixed client-side — a
+  same-origin dev proxy is the only local workaround.
+
 # Canvas wallpaper export
 
 ## A cross-origin flag image silently taints the canvas → toBlob throws

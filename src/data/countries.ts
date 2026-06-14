@@ -1,16 +1,25 @@
-// Fetch + normalize REST Countries v3.1, and resolve any user input (name / alpha-2 /
-// alpha-3) to a single country. Resolution is a *pure* function over a country list so it
-// can be tested offline against fixtures (CRITICAL-RULES #3). The network lives only in the
-// thin fetch helpers at the bottom.
+// Fetch + normalize REST Countries v3.1, and resolve user input (name / alpha-2 / alpha-3) to
+// a country. We deliberately avoid the heavy `/v3.1/all` endpoint — it is frequently
+// throttled and its error responses omit CORS headers (browsers then report a misleading
+// "CORS policy" failure). Instead we use the lightweight, CORS-enabled per-resource endpoints
+// `/alpha` and `/name`.
+//
+// Resolution is expressed against a `CountryApi` interface (dependency-injected) so the exact
+// logic we ship is the logic tested offline against fixtures (CRITICAL-RULES #3) — no live
+// calls in tests.
 
 import type { Country, Currency, NativeName } from './types';
 
-const API_BASE = 'https://restcountries.com/v3.1';
+// In dev we route through the Vite proxy (see vite.config.ts) to dodge CORS while developing
+// on localhost; in production we call the CORS-enabled endpoints directly.
+const API_BASE = import.meta.env.DEV ? '/rc' : 'https://restcountries.com/v3.1';
+
+// Fields query keeps payloads small and stable.
+const FIELDS =
+  'name,cca2,cca3,capital,population,area,region,subregion,languages,currencies,latlng,borders,flags,maps';
 
 // --- Normalization: REST Countries wire shape -> our Country ----------------------------
 
-// The wire shape is loosely typed; we only read the fields in SPEC §5 and tolerate missing
-// ones (SPEC §7: omit, never render undefined).
 export interface RawCountry {
   name?: {
     common?: string;
@@ -73,14 +82,16 @@ export function normalizeCountry(raw: RawCountry): Country {
   };
 }
 
-// --- Resolution (pure) ------------------------------------------------------------------
+// --- API surface (dependency-injected; tests pass a fixture-backed fake) -----------------
 
-export type ResolveResult =
-  | { kind: 'ok'; country: Country }
-  | { kind: 'ambiguous'; matches: Country[] }
-  | { kind: 'none'; query: string; suggestions: string[] };
-
-const norm = (s: string): string => s.trim().toLowerCase();
+export interface CountryApi {
+  /** Exact alpha-2/alpha-3 lookup (`/alpha/{code}`). Empty when unknown. */
+  byAlpha(code: string): Promise<Country[]>;
+  /** Name search (`/name/{name}`) — substring match over common/official/native names. */
+  byName(name: string): Promise<Country[]>;
+  /** Batch alpha-3 lookup (`/alpha?codes=…`), used to turn border codes into names. */
+  byCodes(codes: string[]): Promise<Country[]>;
+}
 
 function allNames(c: Country): string[] {
   return [
@@ -90,98 +101,80 @@ function allNames(c: Country): string[] {
   ].filter(Boolean);
 }
 
-// Cheap edit-distance for "did you mean" suggestions.
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
-  let prev = Array.from({ length: n + 1 }, (_, i) => i);
-  let curr = new Array<number>(n + 1);
-  for (let i = 1; i <= m; i++) {
-    curr[0] = i;
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
-    }
-    [prev, curr] = [curr, prev];
-  }
-  return prev[n];
-}
+// --- Resolution (pure given the api) -----------------------------------------------------
 
-function suggestionsFor(query: string, countries: Country[]): string[] {
-  const q = norm(query);
-  return countries
-    .map((c) => ({
-      name: c.nameCommon,
-      score: Math.min(...allNames(c).map((n) => levenshtein(q, norm(n)))),
-    }))
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 3)
-    .filter((s) => s.score <= Math.max(3, Math.ceil(q.length / 2)))
-    .map((s) => s.name);
-}
+export type ResolveResult =
+  | { kind: 'ok'; country: Country }
+  | { kind: 'ambiguous'; matches: Country[] }
+  | { kind: 'none'; query: string; suggestions: string[] };
 
 /**
- * Resolve a free-form query to a country. Order: exact alpha-2, exact alpha-3, exact name
- * (any of common/official/native), then substring name match. Multiple exact/substring hits
- * => ambiguous; none => suggestions (SPEC §7).
+ * Resolve a free-form query to a country. A 2–3 letter token is tried as an ISO code first;
+ * anything else (or a code miss) falls back to a name search. Multiple hits => ambiguous;
+ * none => not found (SPEC §7). Network/API errors propagate to the caller to surface as a
+ * retryable error.
  */
-export function resolveCountry(rawQuery: string, countries: Country[]): ResolveResult {
-  const q = norm(rawQuery);
+export async function resolveCountry(
+  rawQuery: string,
+  api: CountryApi,
+): Promise<ResolveResult> {
+  const q = rawQuery.trim();
   if (!q) return { kind: 'none', query: rawQuery, suggestions: [] };
 
-  // Exact code matches are unambiguous by construction.
-  if (q.length === 2) {
-    const hit = countries.find((c) => c.cca2.toLowerCase() === q);
-    if (hit) return { kind: 'ok', country: hit };
-  }
-  if (q.length === 3) {
-    const hit = countries.find((c) => c.cca3.toLowerCase() === q);
-    if (hit) return { kind: 'ok', country: hit };
+  if (/^[A-Za-z]{2,3}$/.test(q)) {
+    const byCode = await api.byAlpha(q);
+    if (byCode.length === 1) return { kind: 'ok', country: byCode[0] };
+    if (byCode.length > 1) return { kind: 'ambiguous', matches: byCode };
+    // not a known code — fall through to name search
   }
 
-  const exact = countries.filter((c) => allNames(c).some((n) => norm(n) === q));
+  const byName = await api.byName(q);
+  if (byName.length === 0) return { kind: 'none', query: rawQuery, suggestions: [] };
+
+  const ql = q.toLowerCase();
+  const exact = byName.filter((c) => allNames(c).some((n) => n.toLowerCase() === ql));
   if (exact.length === 1) return { kind: 'ok', country: exact[0] };
+  if (byName.length === 1) return { kind: 'ok', country: byName[0] };
   if (exact.length > 1) return { kind: 'ambiguous', matches: exact };
-
-  const partial = countries.filter((c) => allNames(c).some((n) => norm(n).includes(q)));
-  if (partial.length === 1) return { kind: 'ok', country: partial[0] };
-  if (partial.length > 1) return { kind: 'ambiguous', matches: partial };
-
-  return { kind: 'none', query: rawQuery, suggestions: suggestionsFor(rawQuery, countries) };
+  return { kind: 'ambiguous', matches: byName };
 }
 
-export function resolveBorderNames(country: Country, all: Country[]): string[] {
-  const byCca3 = new Map(all.map((c) => [c.cca3, c.nameCommon] as const));
-  return country.borders.map((b) => byCca3.get(b) ?? b);
+/** Resolve a country's border alpha-3 codes to common names (falls back to codes). */
+export async function fetchBorderNames(country: Country, api: CountryApi): Promise<string[]> {
+  if (country.borders.length === 0) return [];
+  try {
+    const list = await api.byCodes(country.borders);
+    const byCca3 = new Map(list.map((c) => [c.cca3, c.nameCommon] as const));
+    return country.borders.map((code) => byCca3.get(code) ?? code);
+  } catch {
+    return country.borders; // never let a border lookup break rendering
+  }
 }
 
-// --- Network (thin, untested — see fixtures for the data tests) -------------------------
+// --- Live API implementation ------------------------------------------------------------
 
-const memo = new Map<string, Promise<Country[]>>();
-
-async function fetchJson(url: string): Promise<unknown> {
+async function fetchArray(url: string): Promise<Country[]> {
   const res = await fetch(url);
+  if (res.status === 404) return []; // "no such country" — a normal, non-error outcome
   if (!res.ok) {
-    if (res.status === 404) return [];
     throw new Error(`REST Countries request failed: ${res.status} ${res.statusText}`);
   }
-  return res.json();
+  const data = await res.json();
+  return (Array.isArray(data) ? (data as RawCountry[]) : []).map(normalizeCountry);
 }
 
-// Fields query keeps payloads small and stable.
-const FIELDS =
-  'name,cca2,cca3,capital,population,area,region,subregion,languages,currencies,latlng,borders,flags,maps';
-
-/** Fetch + normalize the full country list (memoized per session). */
-export async function fetchAllCountries(): Promise<Country[]> {
-  const key = 'all';
-  if (!memo.has(key)) {
-    const p = fetchJson(`${API_BASE}/all?fields=${FIELDS}`).then((data) =>
-      (Array.isArray(data) ? (data as RawCountry[]) : []).map(normalizeCountry),
-    );
-    memo.set(key, p);
-  }
-  return memo.get(key)!;
+export function createCountryApi(base: string = API_BASE): CountryApi {
+  const cache = new Map<string, Promise<Country[]>>();
+  const get = (url: string): Promise<Country[]> => {
+    if (!cache.has(url)) cache.set(url, fetchArray(url).catch((e) => (cache.delete(url), Promise.reject(e))));
+    return cache.get(url)!;
+  };
+  return {
+    byAlpha: (code) => get(`${base}/alpha/${encodeURIComponent(code)}?fields=${FIELDS}`),
+    byName: (name) => get(`${base}/name/${encodeURIComponent(name)}?fields=${FIELDS}`),
+    byCodes: (codes) =>
+      codes.length === 0
+        ? Promise.resolve([])
+        : get(`${base}/alpha?codes=${codes.map((c) => c.toLowerCase()).join(',')}&fields=${FIELDS}`),
+  };
 }

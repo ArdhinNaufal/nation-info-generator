@@ -1,21 +1,37 @@
 import { useState } from 'react';
 import type { Country } from '../data/types';
-import { resolveCountry, type ResolveResult } from '../data/countries';
+import { resolveCountry, type CountryApi, type ResolveResult } from '../data/countries';
 
 interface Props {
-  countries: Country[];
+  api: CountryApi;
   onResolved: (country: Country) => void;
 }
 
-export default function CountryInput({ countries, onResolved }: Props) {
+export default function CountryInput({ api, onResolved }: Props) {
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<ResolveResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [networkError, setNetworkError] = useState<string | null>(null);
 
-  const submit = (raw: string) => {
+  const submit = async (raw: string) => {
     setQuery(raw);
-    const r = resolveCountry(raw, countries);
-    setResult(r);
-    if (r.kind === 'ok') onResolved(r.country);
+    setLoading(true);
+    setNetworkError(null);
+    try {
+      const r = await resolveCountry(raw, api);
+      setResult(r);
+      if (r.kind === 'ok') onResolved(r.country);
+    } catch {
+      setResult(null);
+      setNetworkError("Couldn't reach the country data service. Check your connection and retry.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pick = (c: Country) => {
+    setResult({ kind: 'ok', country: c });
+    onResolved(c);
   };
 
   return (
@@ -24,7 +40,7 @@ export default function CountryInput({ countries, onResolved }: Props) {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          submit(query);
+          void submit(query);
         }}
       >
         <label htmlFor="country">Name, ISO alpha-2 or alpha-3</label>
@@ -37,32 +53,26 @@ export default function CountryInput({ countries, onResolved }: Props) {
             onChange={(e) => setQuery(e.target.value)}
             autoComplete="off"
           />
-          <button type="submit" className="primary" style={{ flex: '0 0 auto' }}>
-            Load
+          <button type="submit" className="primary" style={{ flex: '0 0 auto' }} disabled={loading}>
+            {loading ? '…' : 'Load'}
           </button>
         </div>
       </form>
 
-      {result?.kind === 'none' && (
+      {networkError && (
         <>
-          <p className="error">
-            Couldn't find a country matching "{result.query}". Check the spelling or code.
-          </p>
-          {result.suggestions.length > 0 && (
-            <>
-              <p className="notice">Did you mean:</p>
-              <ul className="suggestions">
-                {result.suggestions.map((s) => (
-                  <li key={s}>
-                    <button type="button" onClick={() => submit(s)}>
-                      {s}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          <p className="error">{networkError}</p>
+          <button type="button" onClick={() => void submit(query)}>
+            Retry
+          </button>
         </>
+      )}
+
+      {result?.kind === 'none' && (
+        <p className="error">
+          Couldn't find a country matching "{result.query}". Check the spelling or try an ISO
+          code (e.g. JP, JPN).
+        </p>
       )}
 
       {result?.kind === 'ambiguous' && (
@@ -71,13 +81,7 @@ export default function CountryInput({ countries, onResolved }: Props) {
           <ul className="matches">
             {result.matches.map((c) => (
               <li key={c.cca2}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResult({ kind: 'ok', country: c });
-                    onResolved(c);
-                  }}
-                >
+                <button type="button" onClick={() => pick(c)}>
                   {c.nameCommon} ({c.cca2})
                 </button>
               </li>

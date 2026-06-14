@@ -8,10 +8,18 @@
 
 ## Architecture
 
-Vite + React + TS SPA. Data flow: `App.tsx` fetches the full country list once
-(`data/countries.ts`), holds all UI state (resolved country, customization, size, saved
-designs). Input → `CountryInput` (resolve) → `Controls` (customization/size) → `CanvasPreview`
-(render + PNG download). `SavedDesigns` persists to localStorage.
+Vite + React + TS SPA. Data flow: `App.tsx` creates a `CountryApi` (`data/countries.ts`) and
+holds UI state (resolved country, border names, customization, size, saved designs). Input →
+`CountryInput` (async resolve) → `Controls` (customization/size) → `CanvasPreview` (render +
+PNG download). `SavedDesigns` persists to localStorage.
+
+**No `/all`.** We deliberately avoid `restcountries.com/v3.1/all` (heavy, throttled; its error
+responses omit CORS headers, which browsers misreport as a "CORS policy" failure). Resolution
+uses the per-resource endpoints via a DI'd `CountryApi` (`byAlpha` / `byName` / `byCodes`), so
+the shipped `resolveCountry(query, api)` logic is the logic tested offline (tests inject a
+fixture-backed fake). Dev calls go through a Vite proxy (`/rc` → restcountries, see
+`vite.config.ts`) to dodge localhost CORS; prod calls the CORS-enabled endpoints directly
+(`API_BASE` switches on `import.meta.env.DEV`).
 
 Load-bearing seam: **rendering is a pure function** `render(ctx, input)` in
 `render/wallpaper.ts` that draws onto any `RenderTarget` (a structural subset of
@@ -35,6 +43,12 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-14 — Dropped the `/v3.1/all` fetch after it failed with a CORS error in the browser
+  (its throttled/error responses carry no `Access-Control-Allow-Origin`). Switched to per-query
+  endpoints (`/alpha`, `/name`, `/alpha?codes=`) behind a DI'd `CountryApi`; resolution is now
+  async. Added a Vite dev proxy (`/rc`) for localhost; prod hits the endpoints directly. Cost:
+  "did-you-mean" suggestions on a no-match are dropped (no full list to fuzzy-match against) —
+  acceptable per the user. 30 tests passing (resolution rewritten to inject a fixture fake).
 - 2026-06-13 — Built v1. Resolved the spec's open items: **fonts** = Inter/Lora/Montserrat/
   JetBrains Mono (bundled via `@fontsource`, + 0.7–1.6× size scale); **layouts** = Classic,
   Sidebar, Grid, Minimal (Minimal shows only capital/population/region); **size presets** =
