@@ -27,22 +27,43 @@ interface Props {
   fileBase: string;
 }
 
+interface DecodedImages {
+  flag?: CanvasImageSource;
+  photo?: CanvasImageSource;
+  map?: CanvasImageSource;
+}
+
 export default function PosterPreview({ input, images, size, fileBase }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [busy, setBusy] = useState(false);
+  const [decoded, setDecoded] = useState<DecodedImages | null>(null);
 
+  // Decode the images only when the URLs change — not on every text/size/scale tweak, so the
+  // sliders redraw instantly without re-fetching the flag/photo/map.
   useEffect(() => {
     let cancelled = false;
+    setDecoded(null);
     (async () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      if (document.fonts?.ready) await document.fonts.ready;
-
       const [flag, photo, map] = await Promise.all([
         loadFlagImage(images.flagUrl),
         loadImage(images.photoUrl),
         loadImage(images.mapUrl),
       ]);
+      if (!cancelled) setDecoded({ flag, photo, map });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [images]);
+
+  // Redraw whenever the decoded images, the render input (incl. font scales), or the size change.
+  useEffect(() => {
+    if (!decoded) return;
+    let cancelled = false;
+    (async () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      if (document.fonts?.ready) await document.fonts.ready;
       if (cancelled) return;
 
       prepareCanvas(canvas, size);
@@ -50,14 +71,14 @@ export default function PosterPreview({ input, images, size, fileBase }: Props) 
       if (!ctx) return;
       renderPoster(
         ctx,
-        { ...input, flagImage: flag, backgroundImage: photo, mapImage: map },
+        { ...input, flagImage: decoded.flag, backgroundImage: decoded.photo, mapImage: decoded.map },
         size,
       );
     })();
     return () => {
       cancelled = true;
     };
-  }, [input, images, size]);
+  }, [decoded, input, size]);
 
   const download = async () => {
     const canvas = canvasRef.current;

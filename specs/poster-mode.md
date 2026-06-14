@@ -38,7 +38,8 @@ Two sub-columns inside a dark-translucent panel:
   - **Currency** (`Ccy:` prefix, shorter label) — currency name only (no symbol)
 - Along the **far-left edge**: vertical text (bottom-to-top rotation) showing the
   landmark **name** in bold, followed by an em-dash and a one-sentence description.
-  Text is rotated 90° counter-clockwise, clipped to the column height.
+  Text is rotated 90° counter-clockwise. It **wraps onto a second line** in the strip
+  rather than truncating; only past two lines is it clipped with an ellipsis.
 
 **Right sub-column** (≈60% of canvas width):
 - Country **name** — large, bold, white, top-right
@@ -46,7 +47,9 @@ Two sub-columns inside a dark-translucent panel:
 - Below the map, two columns of short facts (right-aligned labels, bold values):
   - Left cell: `Region:` + bold region name
   - Right cell: `Capital:` + bold capital name
-  - Below those: `Off. Lang.:` + official language name(s)
+  - Below those: `Off. Lang.:` + official language name(s). This value (and the left
+    column's `Ccy` value) **wraps onto further lines** rather than clipping — both are
+    the last item in their column, so there is room.
 
 ### 2b. Lower section (~45% of canvas height)
 
@@ -209,8 +212,14 @@ Poster mode reuses the **existing size presets** (Desktop 1920×1080, 4K 3840×2
 Mobile 1080×1920, Square 1080×1080, Tablet 1536×2048, Custom). The layout adapts
 proportionally. Portrait presets (Mobile, Tablet) best match the reference image.
 
-The Geoapify map request uses `mapWidth` = ~40% of canvas width, `mapHeight` = ~30%
-of canvas height, both rounded to nearest integer.
+The Geoapify map is requested at the **exact pixel size of its render slot**
+(`render/poster#mapSlotSize`) so its aspect matches and the renderer can draw it *contained*
+(never cropped) — the whole fetched territory always shows. REST Countries provides no bounding
+box, so `zoomForArea` is biased one step wider than a tight fit; elongated nations (e.g. Norway)
+then sit fully in frame with neighbours visible.
+
+**Text size:** two sliders (0.70–1.60×) scale the upper-section text and the fact-card text
+independently. They re-render live without re-fetching images.
 
 ---
 
@@ -251,7 +260,8 @@ interface PosterInput {
 ## 11. Out of scope (explicit)
 
 - No drag-and-drop or free positioning of poster elements.
-- No theme-color / font / field-toggle customization in poster mode (fixed style).
+- No theme-color / font-family / field-toggle customization in poster mode (fixed style).
+  (Two text-**size** sliders — upper section and facts — are allowed.)
 - No server/backend — all calls go directly from the browser (user is responsible for their keys).
 - No sharing, cloud sync, or URL-based permalinks.
 - No animated/video output.

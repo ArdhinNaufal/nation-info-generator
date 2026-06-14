@@ -30,6 +30,8 @@ export interface PosterInput {
   mapImage?: CanvasImageSource; // Geoapify PNG
   photographerName?: string;
   borderNames?: string[];
+  upperFontScale?: number; // multiplier for upper-section text (default 1)
+  factsFontScale?: number; // multiplier for fact-card text (default 1)
 }
 
 export interface StatRow {
@@ -46,6 +48,9 @@ const WHITE = '#ffffff';
 const PANEL = 'rgba(0, 0, 0, 0.45)';
 const DISPLAY = '"Montserrat", system-ui, sans-serif';
 const BODY = '"Inter", system-ui, sans-serif';
+
+// Width of the far-left vertical-text strip, in `u` units. Wide enough for two stacked lines.
+const VSTRIP_U = 4.2;
 
 const fmtInt = (n: number): string => Math.round(n).toLocaleString('en-US');
 
@@ -81,6 +86,68 @@ export function buildStatRows(input: PosterInput): StatRow[] {
   return rows;
 }
 
+// --- geometry ------------------------------------------------------------------------------
+
+interface UpperGeo {
+  W: number;
+  H: number;
+  u: number;
+  pad: number;
+  upX: number;
+  upY: number;
+  upW: number;
+  upH: number;
+  ip: number;
+  vStrip: number;
+  cX: number;
+  cY: number;
+  cW: number;
+  cH: number;
+  gap: number;
+  leftW: number;
+  rightX: number;
+  rightW: number;
+  mapH: number;
+}
+
+// Single source of truth for the upper-section layout, shared by renderPoster and mapSlotSize
+// so the requested Geoapify image matches the slot it's drawn into (no aspect-driven cropping).
+function upperGeometry(size: { width: number; height: number }): UpperGeo {
+  const W = size.width;
+  const H = size.height;
+  const u = H / 100;
+  const pad = Math.round(Math.min(W, H) * 0.045);
+  const upX = pad;
+  const upY = pad;
+  const upW = W - pad * 2;
+  const upH = Math.round(H * 0.55) - Math.round(pad * 1.5);
+  const ip = Math.round(pad * 0.8);
+  const vStrip = Math.round(u * VSTRIP_U);
+  const cX = upX + ip + vStrip;
+  const cY = upY + ip;
+  const cW = upW - ip * 2 - vStrip;
+  const cH = upH - ip * 2;
+  const gap = ip;
+  const leftW = cW * 0.4;
+  const rightX = cX + leftW + gap;
+  const rightW = cW - leftW - gap;
+  const mapH = Math.round(cH * 0.42);
+  return { W, H, u, pad, upX, upY, upW, upH, ip, vStrip, cX, cY, cW, cH, gap, leftW, rightX, rightW, mapH };
+}
+
+/**
+ * Pixel size of the map slot for a given poster size. The map is requested from Geoapify at
+ * exactly this size so its aspect matches the slot — the whole fetched territory then shows
+ * (the renderer draws it "contained", never cropped).
+ */
+export function mapSlotSize(size: { width: number; height: number }): {
+  width: number;
+  height: number;
+} {
+  const g = upperGeometry(size);
+  return { width: Math.round(g.rightW), height: g.mapH };
+}
+
 // --- low-level drawing helpers -------------------------------------------------------------
 
 function font(px: number, family: string, weight = 400): string {
@@ -103,6 +170,20 @@ function wrap(ctx: RenderTarget, text: string, maxWidth: number): string[] {
   }
   if (line) lines.push(line);
   return lines;
+}
+
+// Wrap, but cap at `maxLines`; if the text overflows, the last kept line gets an ellipsis.
+function wrapClamped(
+  ctx: RenderTarget,
+  text: string,
+  maxWidth: number,
+  maxLines: number,
+): string[] {
+  const lines = wrap(ctx, text, maxWidth);
+  if (lines.length <= maxLines) return lines;
+  const kept = lines.slice(0, maxLines);
+  kept[maxLines - 1] = truncate(ctx, lines.slice(maxLines - 1).join(' '), maxWidth);
+  return kept;
 }
 
 function truncate(ctx: RenderTarget, text: string, maxWidth: number): string {
@@ -178,6 +259,32 @@ function drawContain(
   return dh;
 }
 
+// Contain an image centered in a box (aspect preserved, nothing cropped). Used for the map so
+// the full country territory is always visible (specs/poster-mode.md §2a).
+function drawContainCentered(
+  ctx: RenderTarget,
+  img: CanvasImageSource,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  const { w: iw, h: ih } = imgDims(img);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  if (iw > 0 && ih > 0) {
+    const scale = Math.min(w / iw, h / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  } else {
+    ctx.drawImage(img, x, y, w, h);
+  }
+  ctx.restore();
+}
+
 // --- the renderer --------------------------------------------------------------------------
 
 /**
@@ -190,9 +297,10 @@ export function renderPoster(
   size: { width: number; height: number },
 ): PosterRenderResult {
   const { country } = input;
-  const W = size.width;
-  const H = size.height;
-  const u = H / 100; // base sizing unit
+  const g = upperGeometry(size);
+  const { W, H, u, pad, upX, upY, upW, upH, ip, vStrip, cX, cY, cH, gap, leftW, rightX, rightW, mapH } = g;
+  const us = input.upperFontScale ?? 1; // upper-section text scale
+  const fs = input.factsFontScale ?? 1; // fact-card text scale
 
   // ---- Background: landmark photo (cover) or dark gradient fallback (§2c, §8) ----
   if (input.backgroundImage) {
@@ -200,46 +308,34 @@ export function renderPoster(
     ctx.fillStyle = 'rgba(0, 0, 0, 0.18)'; // light scrim for legibility
     ctx.fillRect(0, 0, W, H);
   } else {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#20242c');
-    g.addColorStop(1, '#0b0d12');
-    ctx.fillStyle = g as unknown as CanvasGradient;
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#20242c');
+    grad.addColorStop(1, '#0b0d12');
+    ctx.fillStyle = grad as unknown as CanvasGradient;
     ctx.fillRect(0, 0, W, H);
   }
 
-  const pad = Math.round(Math.min(W, H) * 0.045);
-
   // ================= UPPER SECTION (~55% height) =================
-  const upX = pad;
-  const upY = pad;
-  const upW = W - pad * 2;
-  const upH = Math.round(H * 0.55) - Math.round(pad * 1.5);
   panel(ctx, upX, upY, upW, upH);
 
-  const ip = Math.round(pad * 0.8);
-  const vStrip = Math.round(u * 3.5); // far-left vertical-text strip
-  const cX = upX + ip + vStrip;
-  const cY = upY + ip;
-  const cW = upW - ip * 2 - vStrip;
-  const cH = upH - ip * 2;
-  const gap = ip;
-  const leftW = cW * 0.4;
-  const rightX = cX + leftW + gap;
-  const rightW = cW - leftW - gap;
-
   // ---- Far-left vertical text: "Landmark — description", rotated 90° CCW (§2a) ----
+  // Wraps onto a second line rather than truncating; only past two lines is it clipped.
   if (input.landmarkName) {
     const label = input.landmarkDescription
       ? `${input.landmarkName} — ${input.landmarkDescription}`
       : input.landmarkName;
-    ctx.save();
-    ctx.translate(upX + ip * 0.5 + vStrip * 0.4, upY + upH - ip);
-    ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = WHITE;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.font = font(u * 1.5, DISPLAY, 700);
-    ctx.fillText(truncate(ctx, label, upH - ip * 2), 0, 0);
+    ctx.font = font(u * 1.4, DISPLAY, 700);
+    const avail = upH - ip * 2; // run length along the strip
+    const lines = wrapClamped(ctx, label, avail, 2);
+    const lineGap = u * 1.7;
+    const offset0 = -((lines.length - 1) / 2) * lineGap;
+    ctx.save();
+    ctx.translate(upX + ip + vStrip / 2, upY + upH - ip);
+    ctx.rotate(-Math.PI / 2);
+    lines.forEach((ln, i) => ctx.fillText(ln, 0, offset0 + i * lineGap));
     ctx.restore();
   }
 
@@ -256,12 +352,21 @@ export function renderPoster(
     if (ly > cY + cH) break;
     ctx.textBaseline = 'top';
     ctx.fillStyle = WHITE;
-    ctx.font = font(u * 1.5, DISPLAY, 700);
+    ctx.font = font(u * 1.5 * us, DISPLAY, 700);
     ctx.fillText(truncate(ctx, row.label, leftW), cX, ly);
-    ly += u * 2.1;
-    ctx.font = font(u * 2.3, BODY, 400);
-    ctx.fillText(truncate(ctx, row.value, leftW), cX, ly);
-    ly += u * 3.6;
+    ly += u * 2.1 * us;
+    ctx.font = font(u * 2.3 * us, BODY, 400);
+    if (row.label === 'Ccy') {
+      // Currency is the last left-column row, so let a long name wrap instead of clipping.
+      for (const vl of wrap(ctx, row.value, leftW)) {
+        ctx.fillText(vl, cX, ly);
+        ly += u * 2.8 * us;
+      }
+      ly += u * 0.8 * us;
+    } else {
+      ctx.fillText(truncate(ctx, row.value, leftW), cX, ly);
+      ly += u * 3.6 * us;
+    }
   }
 
   // ---- Right sub-column: name, map, mini-facts ----
@@ -269,21 +374,19 @@ export function renderPoster(
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
   ctx.fillStyle = WHITE;
-  ctx.font = font(u * 5.5, DISPLAY, 700);
+  ctx.font = font(u * 5.5 * us, DISPLAY, 700);
   let ry = cY;
   for (const line of wrap(ctx, country.nameCommon, rightW)) {
     ctx.fillText(line, rightX + rightW, ry);
-    ry += u * 6;
+    ry += u * 6 * us;
   }
-  ry += u * 1.5;
+  ry += u * 1.5 * us;
 
-  // Map snapshot.
-  const mapH = Math.round(cH * 0.42);
-  if (ry + mapH > cY + cH) {
-    // keep within column
-  }
+  // Map snapshot — contained (never cropped) over a dark backing so the whole territory shows.
   if (input.mapImage) {
-    drawCover(ctx, input.mapImage, rightX, ry, rightW, mapH);
+    ctx.fillStyle = 'rgba(20, 20, 20, 1)';
+    ctx.fillRect(rightX, ry, rightW, mapH);
+    drawContainCentered(ctx, input.mapImage, rightX, ry, rightW, mapH);
   } else {
     ctx.fillStyle = 'rgba(20, 20, 20, 1)';
     ctx.fillRect(rightX, ry, rightW, mapH);
@@ -295,24 +398,39 @@ export function renderPoster(
   }
   let my = ry + mapH + u * 2.5;
 
-  // Below the map: Region / Capital (two cells), then Off. Lang.
+  // Below the map: Region / Capital (two cells), then Off. Lang. (wraps — it's last, with room).
   const cellW = (rightW - gap) / 2;
-  const miniCell = (label: string, value: string, x: number, y: number, w: number): void => {
+  const miniCell = (
+    label: string,
+    value: string,
+    x: number,
+    y: number,
+    w: number,
+    wrapValue = false,
+  ): void => {
     if (!value) return;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillStyle = WHITE;
     ctx.globalAlpha = 0.75;
-    ctx.font = font(u * 1.4, BODY, 400);
+    ctx.font = font(u * 1.4 * us, BODY, 400);
     ctx.fillText(`${label}:`, x, y);
     ctx.globalAlpha = 1;
-    ctx.font = font(u * 1.9, DISPLAY, 700);
-    ctx.fillText(truncate(ctx, value, w), x, y + u * 1.9);
+    ctx.font = font(u * 1.9 * us, DISPLAY, 700);
+    if (wrapValue) {
+      let vy = y + u * 1.9 * us;
+      for (const vl of wrap(ctx, value, w)) {
+        ctx.fillText(vl, x, vy);
+        vy += u * 2.3 * us;
+      }
+    } else {
+      ctx.fillText(truncate(ctx, value, w), x, y + u * 1.9 * us);
+    }
   };
   miniCell('Region', country.region, rightX, my, cellW);
   miniCell('Capital', country.capital.join(', '), rightX + cellW + gap, my, cellW);
-  my += u * 4.6;
-  miniCell('Off. Lang.', country.languages.join(', '), rightX, my, rightW);
+  my += u * 4.6 * us;
+  miniCell('Off. Lang.', country.languages.join(', '), rightX, my, rightW, true);
 
   // ================= LOWER SECTION (~45% height): prose fact cards (§2b) =================
   const lowerTop = upY + upH + Math.round(pad * 0.6);
@@ -320,14 +438,14 @@ export function renderPoster(
   const factX = pad;
   const factW = W - pad * 2;
   const cardPad = Math.round(u * 1.4);
-  const lineH = u * 2.5;
+  const lineH = u * 2.5 * fs;
 
   let fy = lowerTop;
   let factsDrawn = 0;
   const facts = input.facts.slice(0, 7); // max 7 (§2b)
   ctx.textAlign = 'left';
   for (const fact of facts) {
-    ctx.font = font(u * 2, BODY, 400);
+    ctx.font = font(u * 2 * fs, BODY, 400);
     const lines = wrap(ctx, fact, factW - cardPad * 2);
     const cardH = cardPad * 2 + lines.length * lineH;
     if (fy + cardH > lowerBottom) break; // stop when space runs out

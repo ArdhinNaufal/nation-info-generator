@@ -43,6 +43,18 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-14 — **Poster Mode layout + readability pass.** (1) The whole page is now
+  non-scrolling: `.app` is a `100vh` flex column with `overflow:hidden`; only the left settings
+  column (`.layout > div:nth-child(1)`) scrolls; the preview is capped at `calc(100vh - 240px)`.
+  A `<900px` media query relaxes back to normal scroll. (2) Renderer text no longer clips where
+  there's room: the rotated landmark label wraps to **2 lines** (ellipsis only past 2), and the
+  `Ccy` value + `Off. Lang.` value **wrap** (they're last in their column). (3) Map: requested at
+  the **exact slot size** (`mapSlotSize`, single geometry source shared with `renderPoster`) and
+  drawn **contained** (never cropped); `zoomForArea` biased one step wider (Norway→4) since REST
+  Countries gives no bbox. (4) Two **font-size sliders** (`upperFontScale`/`factsFontScale`,
+  0.70–1.60×) scale upper vs fact text. `PosterPreview` now decodes images in one effect and
+  draws in another, so slider/text tweaks redraw without re-fetching the flag/photo/map. 62 tests.
+
 - 2026-06-14 — **Dropped the browser-direct Claude call from Poster Mode**; the landmark
   name/description, photo-search query, and facts are now **typed by the user** in a "Poster
   content" form (`PosterMode.tsx`). Deleted `services/claudePoster.ts` and the `anthropic` key

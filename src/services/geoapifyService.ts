@@ -4,12 +4,18 @@
 
 const BASE = 'https://maps.geoapify.com/v1/staticmap';
 
-/** Zoom from country area (km²) — bigger countries zoom out further (§4). */
+/**
+ * Zoom from country area (km²) — bigger countries zoom out further (§4). REST Countries gives
+ * no bounding box, so we can't fit the exact territory; the table is biased one step wider than
+ * a tight fit so elongated nations (e.g. Norway) sit fully in frame, with neighbours visible.
+ * The map is requested at the render slot's size (see render/poster#mapSlotSize) so this stays
+ * calibrated to the on-poster pixel width.
+ */
 export function zoomForArea(area: number): number {
-  if (area > 3_000_000) return 3;
-  if (area > 500_000) return 4;
-  if (area > 50_000) return 5;
-  if (area > 5_000) return 6;
+  if (area > 2_500_000) return 3;
+  if (area > 250_000) return 4;
+  if (area > 25_000) return 5;
+  if (area > 2_500) return 6;
   return 7;
 }
 

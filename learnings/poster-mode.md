@@ -30,6 +30,28 @@
   images (the slots degrade to gradient / "Map unavailable"), so this path is browser-only; keep
   the dimension read defensive so an unexpected source type can't throw mid-render.
 
+## Geoapify static maps can't "fit a country" without a bounding box
+- **Date:** 2026-06-14
+- **Symptom:** a center+zoom map cut off elongated countries (Norway) — the territory ran past
+  the frame top/bottom or sides.
+- **Cause(s):** two compounding ones. (a) The map was *requested* at one aspect (0.4W×0.3H) but
+  *drawn* into a differently-shaped slot, and `drawCover` crops the overflow. (b) A fixed
+  area→zoom table ignores the map's pixel width, so the same area can over- or under-fill.
+- **Fix:** one geometry source (`upperGeometry` → `mapSlotSize`) so the request matches the slot
+  exactly; draw the map **contained** (centered, never cropped) over a dark backing; and bias
+  `zoomForArea` one step wider. REST Countries (v5) exposes only `latlng` (centroid) + `area`, no
+  bbox — so a *perfect* fit isn't possible client-side; the wider bias trades some empty margin
+  (neighbours visible) for never clipping the country. If a bbox source is added later, switch to
+  Geoapify's `area=rect:lon1,lat1,lon2,lat2` for an exact fit.
+
+## Decode images and draw in *separate* effects so render-only tweaks don't refetch
+- **Date:** 2026-06-14
+- **Rule:** `PosterPreview` loads the flag/photo/map in an effect keyed on the image URLs, stores
+  the decoded `CanvasImageSource`s in state, and draws in a second effect keyed on
+  `[decoded, input, size]`. The font-size sliders change `input` only, so they redraw instantly
+  without re-fetching images. Memoize `images` (URLs) in the parent on `[country, record]` so its
+  identity is stable across slider/text changes, or the load effect re-runs anyway.
+
 ## Async generation must be guarded against rapid country switches
 - **Date:** 2026-06-14
 - **Symptom (caught in review, pre-merge):** switch country mid-pipeline and the slow run's

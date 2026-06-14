@@ -14,6 +14,7 @@ import {
   clearPosterCache,
   type PosterCache,
 } from '../state/posterCache';
+import { mapSlotSize } from '../render/poster';
 import { fetchGdp } from '../services/worldbank';
 import { fetchPhoto } from '../services/unsplashService';
 import { buildMapUrl } from '../services/geoapifyService';
@@ -70,6 +71,8 @@ export default function PosterMode({ api }: Props) {
   const [keys, setKeysState] = useState<PosterKeys>(() => getKeys());
   const [sizeId, setSizeId] = useState('mobile'); // portrait best matches the poster (§9)
   const [customSize, setCustomSize] = useState({ width: 1080, height: 1920 });
+  const [upperScale, setUpperScale] = useState(1); // upper-section text size
+  const [factsScale, setFactsScale] = useState(1); // fact-card text size
 
   // Monotonic run id: a newer country/regenerate invalidates any in-flight generation so a
   // slow pipeline can't render one country's data under another (guards rapid switching).
@@ -150,9 +153,9 @@ export default function PosterMode({ api }: Props) {
     // if the image fails or no URL was produced).
     let geoapifyUrl = '';
     if (k.geoapify && c.latlng) {
-      const mapW = Math.round(size.width * 0.4);
-      const mapH = Math.round(size.height * 0.3);
-      geoapifyUrl = buildMapUrl(c.latlng[0], c.latlng[1], c.area, mapW, mapH, k.geoapify);
+      // Request the map at the exact slot size so its aspect matches and nothing is cropped.
+      const slot = mapSlotSize(size);
+      geoapifyUrl = buildMapUrl(c.latlng[0], c.latlng[1], c.area, slot.width, slot.height, k.geoapify);
     }
 
     const next: PosterCache = {
@@ -209,9 +212,11 @@ export default function PosterMode({ api }: Props) {
             gdp: record.gdp,
             gdpPerCapitaPpp: record.gdpPerCapitaPpp,
             photographerName: record.photographerName || undefined,
+            upperFontScale: upperScale,
+            factsFontScale: factsScale,
           }
         : null,
-    [country, record],
+    [country, record, upperScale, factsScale],
   );
 
   const setField = (name: keyof PosterForm, value: string) =>
@@ -323,6 +328,38 @@ export default function PosterMode({ api }: Props) {
           )}
           {!sizeResult.ok && <p className="error">{sizeResult.error}</p>}
         </div>
+
+        {country && (
+          <div className="panel">
+            <h2>Text size</h2>
+            <div style={{ marginBottom: 12 }}>
+              <label htmlFor="poster-upper-scale">
+                Upper content — {upperScale.toFixed(2)}×
+              </label>
+              <input
+                id="poster-upper-scale"
+                type="range"
+                min={0.7}
+                max={1.6}
+                step={0.05}
+                value={upperScale}
+                onChange={(e) => setUpperScale(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label htmlFor="poster-facts-scale">Facts content — {factsScale.toFixed(2)}×</label>
+              <input
+                id="poster-facts-scale"
+                type="range"
+                min={0.7}
+                max={1.6}
+                step={0.05}
+                value={factsScale}
+                onChange={(e) => setFactsScale(Number(e.target.value))}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div>

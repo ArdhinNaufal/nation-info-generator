@@ -2,6 +2,18 @@
 
 > Doubles as an audit trail of AI-assisted work. Record the item and how it was verified.
 
+- [x] 2026-06-14 — Poster Mode layout + readability pass. Page is now non-scrolling (only the
+      left settings column scrolls; preview capped to the viewport; `<900px` relaxes to normal
+      flow). Renderer: rotated landmark label wraps to 2 lines (ellipsis only past 2); `Ccy` and
+      `Off. Lang.` values wrap instead of clipping. Map requested at the exact render-slot size
+      (`mapSlotSize`) and drawn contained (never cropped); `zoomForArea` biased one step wider so
+      elongated nations sit fully in frame. Added two font-size sliders (upper vs facts) via
+      `upperFontScale`/`factsFontScale`; `PosterPreview` split into decode-effect + draw-effect so
+      slider/text tweaks redraw without re-fetching images. Verified:
+      `bash .claude/skills/verify/scripts/check.sh` → PASS (`tsc --noEmit` clean + 62 vitest
+      cases: +landmark/Ccy/lang wrap, +font scales, +mapSlotSize, +geoapify zoom/url) and
+      `npm run build` succeeds. Manual browser E2E (non-scroll layout + visual fit) remains.
+
 - [x] 2026-06-14 — Built Poster Mode (`specs/poster-mode.md`): new "Poster" tab generating a
       magazine-style portrait poster — landmark-photo background, flag + World Bank GDP stats,
       Geoapify map, Claude-written facts. New: pure `render/poster.ts` (`PosterTarget extends`

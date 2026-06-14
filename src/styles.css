@@ -14,16 +14,29 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+}
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  overflow: hidden; /* page itself never scrolls; only the settings column does */
 }
 
 .app {
   max-width: 1280px;
+  height: 100vh;
   margin: 0 auto;
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app > header {
+  flex: 0 0 auto;
 }
 
 header h1 {
@@ -44,10 +57,41 @@ header a {
   grid-template-columns: 360px 1fr;
   gap: 24px;
   align-items: start;
+  flex: 1 1 auto;
+  min-height: 0; /* let the columns own the scroll, not the page */
+  overflow: hidden;
+}
+/* Left column (settings cards) is the only scrollable region. */
+.layout > div:nth-child(1) {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+/* Right column (preview) fits within the viewport — it does not scroll. */
+.layout > div:nth-child(2) {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 @media (max-width: 900px) {
+  body {
+    overflow: auto;
+  }
+  .app {
+    height: auto;
+    overflow: visible;
+  }
   .layout {
     grid-template-columns: 1fr;
+    overflow: visible;
+  }
+  .layout > div:nth-child(1),
+  .layout > div:nth-child(2) {
+    height: auto;
+    overflow: visible;
   }
 }
 
@@ -90,6 +134,11 @@ select {
 textarea {
   resize: vertical;
   line-height: 1.5;
+}
+
+input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
 }
 
 .row {
@@ -183,10 +232,16 @@ button:disabled {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .preview-wrap canvas {
   max-width: 100%;
+  max-height: calc(100vh - 240px); /* keep the preview inside the non-scrolling viewport */
+  width: auto;
   height: auto;
+  margin: 0 auto;
   border-radius: 6px;
   display: block;
   background: #000;
@@ -299,6 +354,7 @@ button:disabled {
 .poster-skeleton {
   width: 100%;
   max-width: 360px;
+  max-height: calc(100vh - 280px);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
