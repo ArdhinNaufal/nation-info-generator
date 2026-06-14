@@ -153,8 +153,11 @@ export async function fetchBorderNames(country: Country, api: CountryApi): Promi
 
 // --- Live API implementation ------------------------------------------------------------
 
+const API_KEY = import.meta.env.VITE_RESTCOUNTRIES_API_KEY as string | undefined;
+
 async function fetchArray(url: string): Promise<Country[]> {
-  const res = await fetch(url);
+  const headers: HeadersInit = API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {};
+  const res = await fetch(url, { headers });
   if (res.status === 404) return []; // "no such country" — a normal, non-error outcome
   if (!res.ok) {
     throw new Error(`REST Countries request failed: ${res.status} ${res.statusText}`);
