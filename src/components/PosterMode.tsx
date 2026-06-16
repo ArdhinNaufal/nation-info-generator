@@ -55,7 +55,7 @@ function fieldFacts(c: Country): string[] {
   return f.slice(0, 7);
 }
 
-const DEFAULT_MAP_ZOOM = 4; // Geoapify zoom; user adjusts per country
+const DEFAULT_MAP_ZOOM = 2; // Geoapify zoom; wide enough to frame whole territories, user adjusts
 
 const parseFacts = (text: string): string[] =>
   text

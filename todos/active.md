@@ -23,8 +23,9 @@
       a long currency name and a long Off. Lang. list wrap instead of showing `…`.
 - [ ] Map zoom slider: the Map card preview updates live as you drag (centered on the country),
       then Generate renders the poster map at exactly that zoom/center and fills the rectangle.
-      Switch away and back to a cached country → its saved zoom is restored. Confirm the center
-      sits on the country (not off in the ocean) for `Norway`, `France`, `United States`.
+      Switch away and back to a cached country → its saved zoom is restored. Confirm: default zoom
+      2 frames the whole territory, the center sits on the country (not off in the ocean), and the
+      map labels are in **English** (try `Norway`, `日本`/`Japan`, `France`, `United States`).
 - [ ] Gap is visible between the rotated landmark strip and the flag/stats column.
 - [ ] Upper panel is shorter / fact cards have more room than before.
 - [ ] Preview zoom (−/%/+) scales the on-screen poster and scrolls when zoomed in; Download still

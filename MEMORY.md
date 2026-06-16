@@ -43,6 +43,12 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-16 — **Poster Mode — English map labels + default zoom 2.** Switched the Geoapify
+  static map from the raster `osm-carto` (labels baked in the local language) to the vector
+  `osm-bright` style with `lang=en`, so place names render in English. Default `mapZoom` 4→2 so
+  the centroid-centered map frames the whole territory by default (user still adjusts). Test now
+  asserts `lang=en` + `style=osm-bright`.
+
 - 2026-06-16 — **Poster Mode — map preview + centroid centering.** The Map card now shows a
   **live Geoapify preview** (`mapPreviewUrl`, 320px wide at the slot aspect) at the chosen zoom,
   so the zoom can be tuned with one static-map request instead of re-running Generate. Fixed the

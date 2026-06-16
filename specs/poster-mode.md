@@ -217,12 +217,14 @@ proportionally. Portrait presets (Mobile, Tablet) best match the reference image
 
 The map is requested at the **exact pixel size of its render slot** (`render/poster#mapSlotSize`)
 and the renderer **cover-fills** that slot. The **zoom is a manual setting** — a "Map zoom"
-slider (1–12) whose value is captured when the user clicks Generate (`buildMapUrlAt`). The map is
-**centered on the REST Countries centroid** (`country.latlng`) — reliable and mainland-focused
-(a geocoded country bbox can include far-flung territory and throw the center off). The Map card
-shows a **live preview** at the chosen zoom (the same center/zoom Generate will use), so the user
-can tune the zoom with a single static-map request — no Unsplash/World Bank calls. The chosen
-zoom is stored in the cache (`mapZoom`) and restored on a cache hit.
+slider (1–12, **default 2** so the whole territory is framed) whose value is captured when the
+user clicks Generate (`buildMapUrlAt`). The map is **centered on the REST Countries centroid**
+(`country.latlng`) — reliable and mainland-focused (a geocoded country bbox can include far-flung
+territory and throw the center off). Labels are forced to **English** via Geoapify's vector
+`osm-bright` style + `lang=en` (the raster `osm-carto` style bakes in local-language names). The
+Map card shows a **live preview** at the chosen zoom (the same center/zoom Generate will use), so
+the user can tune the zoom with a single static-map request — no Unsplash/World Bank calls. The
+chosen zoom is stored in the cache (`mapZoom`) and restored on a cache hit.
 
 **Text size:** two sliders (0.70–1.60×) scale the upper-section text and the fact-card text
 independently (defaults: upper 0.75×, facts 0.70×). They re-render live without re-fetching
