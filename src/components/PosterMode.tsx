@@ -17,7 +17,7 @@ import {
 import { mapSlotSize } from '../render/poster';
 import { fetchGdp } from '../services/worldbank';
 import { fetchPhoto } from '../services/unsplashService';
-import { bboxCenter, buildMapUrlAt, fetchCountryBbox } from '../services/geoapifyService';
+import { buildMapUrlAt } from '../services/geoapifyService';
 import CountryInput from './CountryInput';
 import KeySettings from './KeySettings';
 import PosterPreview, { type PosterImages } from './PosterPreview';
@@ -135,9 +135,8 @@ export default function PosterMode({ api }: Props) {
     const query = form.unsplashQuery.trim() || `${c.nameCommon} landscape`;
     const facts = parseFacts(form.factsText);
 
-    // World Bank (no key), Unsplash, and the Geoapify country bbox run in parallel. Unsplash
-    // retries once with a fallback; the bbox lets the map fit the whole territory exactly.
-    const [gdpRes, photo, bbox] = await Promise.all([
+    // World Bank (no key) and Unsplash run in parallel; Unsplash retries once with a fallback.
+    const [gdpRes, photo] = await Promise.all([
       fetchGdp(c.cca2).catch(() => ({ gdp: null, gdpPpp: null })),
       k.unsplash
         ? (async () => {
@@ -151,20 +150,15 @@ export default function PosterMode({ api }: Props) {
             }
           })()
         : Promise.resolve(null),
-      k.geoapify && c.latlng
-        ? fetchCountryBbox(c.nameCommon, k.geoapify).catch(() => null)
-        : Promise.resolve(null),
     ]);
     if (stale()) return; // a newer country/regenerate superseded this run
 
-    // Geoapify map: centered on the geocoded bbox (falling back to the REST Countries centroid)
-    // at the user's captured zoom. Requested at the slot size so cover-fill leaves no gaps.
-    let geoapifyUrl = '';
-    if (k.geoapify && c.latlng) {
-      const slot = mapSlotSize(size);
-      const center = bbox ? bboxCenter(bbox) : { lat: c.latlng[0], lng: c.latlng[1] };
-      geoapifyUrl = buildMapUrlAt(center.lat, center.lng, mapZoom, slot.width, slot.height, k.geoapify);
-    }
+    // Geoapify map: centered on the REST Countries centroid at the user's captured zoom, requested
+    // at the slot size so cover-fill leaves no gaps. Same center/zoom as the live Map-card preview.
+    const geoapifyUrl =
+      k.geoapify && c.latlng
+        ? buildMapUrlAt(c.latlng[0], c.latlng[1], mapZoom, mapSlotSize(size).width, mapSlotSize(size).height, k.geoapify)
+        : '';
 
     const next: PosterCache = {
       alpha2: c.cca2,
@@ -193,6 +187,17 @@ export default function PosterMode({ api }: Props) {
     !!record &&
     ((!!keys.unsplash && !record.unsplashPhotoUrl) ||
       (!!keys.geoapify && !!country?.latlng && !record.geoapifyUrl));
+
+  // Live Map-card preview: the same center (REST centroid) + zoom the Generate map will use, so
+  // the user can tune the zoom against a small image without re-running the whole pipeline. Only
+  // this one static-map request is made per zoom change (no Unsplash / World Bank calls).
+  const mapPreviewUrl = useMemo(() => {
+    if (!country?.latlng || !keys.geoapify) return '';
+    const slot = mapSlotSize(activeSize ?? { width: 1080, height: 1920 });
+    const w = 320;
+    const h = Math.round((slot.height / slot.width) * w);
+    return buildMapUrlAt(country.latlng[0], country.latlng[1], mapZoom, w, h, keys.geoapify);
+  }, [country, keys.geoapify, mapZoom, activeSize]);
 
   // Which key-backed sections can't run because a key is missing (spec §5 inline guidance).
   const missingKeyLabels = [
@@ -354,6 +359,15 @@ export default function PosterMode({ api }: Props) {
             <p className="notice">
               Higher = closer in. Captured into the map when you click <strong>Generate poster</strong>.
             </p>
+            {mapPreviewUrl ? (
+              <img
+                className="map-preview"
+                src={mapPreviewUrl}
+                alt={`Map of ${country.nameCommon} at zoom ${mapZoom}`}
+              />
+            ) : (
+              <p className="notice">Add a Geoapify key in Settings to preview the map.</p>
+            )}
           </div>
         )}
 

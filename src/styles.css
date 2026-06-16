@@ -254,6 +254,15 @@ button:disabled {
   background: #000;
 }
 
+.map-preview {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
 .zoom-controls {
   display: flex;
   align-items: center;

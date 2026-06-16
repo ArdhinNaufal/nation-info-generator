@@ -43,6 +43,14 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-16 — **Poster Mode — map preview + centroid centering.** The Map card now shows a
+  **live Geoapify preview** (`mapPreviewUrl`, 320px wide at the slot aspect) at the chosen zoom,
+  so the zoom can be tuned with one static-map request instead of re-running Generate. Fixed the
+  "way off" centering: dropped the geocoded-bbox center (`fetchCountryBbox`/`bboxCenter` removed)
+  — a country bbox can include overseas territory and skew the center into the ocean — and now
+  center on the **REST Countries centroid** (`country.latlng`), the same center the preview and
+  Generate both use. `geoapifyService` is down to just `buildMapUrlAt`. 59 tests.
+
 - 2026-06-14 — **Poster Mode — manual map zoom.** Replaced the auto-fit map zoom with a
   user-controlled **"Map zoom" slider (1–12)** whose value is captured at Generate and baked into
   the Geoapify URL (`buildMapUrlAt`). The map is still **centered** on the geocoded bbox
