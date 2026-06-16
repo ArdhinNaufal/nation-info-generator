@@ -244,8 +244,19 @@ button:disabled {
   display: block;
   text-align: center;
 }
-.preview-wrap canvas {
-  /* max-width / max-height are set inline from the zoom level (keeps the export untouched). */
+/* Wallpaper preview canvas (a direct child of .preview-wrap, no zoom): fit the card/viewport. */
+.preview-wrap > canvas {
+  max-width: 100%;
+  max-height: calc(100vh - 240px);
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 6px;
+  display: block;
+  background: #000;
+}
+/* Poster preview canvas: size is controlled inline by the zoom level; it scrolls in its wrapper. */
+.poster-canvas-scroll canvas {
   width: auto;
   height: auto;
   margin: 0 auto;

@@ -43,6 +43,12 @@ Decisions to capture as they're made:
 
 ## Decisions log (newest first)
 
+- 2026-06-16 — **Fix wallpaper preview regression.** The poster zoom feature moved the canvas
+  fit constraints to inline styles and emptied the shared `.preview-wrap canvas` rule, so the
+  Wallpaper canvas (a bare child of `.preview-wrap`) lost `max-width`/`max-height` and overflowed.
+  Split the CSS: `.preview-wrap > canvas` (wallpaper) gets the fit caps back;
+  `.poster-canvas-scroll canvas` (poster) stays inline-sized for zoom. CSS-only.
+
 - 2026-06-16 — **Poster Mode — English map labels + default zoom 2.** Switched the Geoapify
   static map from the raster `osm-carto` (labels baked in the local language) to the vector
   `osm-bright` style with `lang=en`, so place names render in English. Default `mapZoom` 4→2 so
